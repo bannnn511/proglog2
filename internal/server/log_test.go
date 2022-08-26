@@ -119,67 +119,6 @@ func TestLog_Read(t *testing.T) {
 	}
 }
 
-func TestLog_Read_Concurrent(t *testing.T) {
-	type fields struct {
-		records []Record
-	}
-	type args struct {
-		offset uint64
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    Record
-		wantErr error
-	}{
-		{
-			name: "Test Read at offset 0",
-			fields: fields{
-				records: generateDummyRecords(),
-			},
-			args:    args{offset: 0},
-			want:    Record{Offset: 0, Value: []byte("test 0")},
-			wantErr: ErrorOffsetNotFound,
-		},
-		{
-			name: "Test Read at offset 1",
-			fields: fields{
-				records: generateDummyRecords(),
-			},
-			args:    args{offset: 1},
-			want:    Record{Offset: 1, Value: []byte("test 1")},
-			wantErr: ErrorOffsetNotFound,
-		},
-	}
-
-	var wg sync.WaitGroup
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			test := tt
-
-			l := &Log{
-				records: test.fields.records,
-				mu:      sync.Mutex{},
-			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				got, err := l.Read(test.args.offset)
-				if err != nil && err != test.wantErr {
-					t.Errorf("Read() error = %v, wantErr %v", err, test.wantErr)
-					return
-				}
-				if !reflect.DeepEqual(got, test.want) {
-					t.Errorf("Read() got = %v, want %v", got, test.want)
-				}
-			}()
-		})
-	}
-
-	wg.Wait()
-}
-
 func generateDummyRecords() []Record {
 	return []Record{
 		{
