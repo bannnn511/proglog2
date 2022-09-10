@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"net/http"
+	"proglog/internal/log"
 	"strconv"
 )
 
@@ -32,17 +33,17 @@ func NewHTTPServer(addr string) http.Server {
 }
 
 type httpServer struct {
-	Log *Log
+	Log *log.Log
 }
 
 func newHttpServer() *httpServer {
 	return &httpServer{
-		Log: NewLog(),
+		Log: log.NewLog(),
 	}
 }
 
 type ProduceRequest struct {
-	Record Record `json:"record"`
+	Record log.Record `json:"record"`
 }
 
 type ProduceResponse struct {
@@ -74,7 +75,7 @@ func (s *httpServer) produceHandler(write http.ResponseWriter, request *http.Req
 }
 
 type consumeResponse struct {
-	Record Record `json:"record"`
+	Record log.Record `json:"record"`
 }
 
 func (s *httpServer) consumeHandler(write http.ResponseWriter, request *http.Request) {
