@@ -22,7 +22,7 @@ func TestLog_Append(t *testing.T) {
 		want   uint64
 	}{
 		{
-			name: "Test append at offset 0",
+			name: "Test append one record",
 			fields: fields{
 				records: []Record{},
 			},
@@ -32,7 +32,7 @@ func TestLog_Append(t *testing.T) {
 			want: 0,
 		},
 		{
-			name: "Test append at offset 1",
+			name: "Test append two records",
 			fields: fields{
 				records: []Record{},
 			},
