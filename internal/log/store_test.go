@@ -8,7 +8,7 @@ import (
 
 func Test_store_Append(t *testing.T) {
 	file, _ := os.CreateTemp("", "store_append_test")
-	s, _ := NewStore(file)
+	s, _ := newStore(file)
 
 	type args struct {
 		data []byte
@@ -59,7 +59,7 @@ func Test_store_Append_Read(t *testing.T) {
 	file, _ := os.CreateTemp("", "store_append_test")
 	defer file.Close()
 
-	s, _ := NewStore(file)
+	s, _ := newStore(file)
 
 	u, u2, err := s.Append([]byte(content))
 	if err != nil {
@@ -84,7 +84,7 @@ func Test_store_ReadAt(t *testing.T) {
 	file, _ := os.CreateTemp("", "store_append_test")
 	defer file.Close()
 
-	s, _ := NewStore(file)
+	s, _ := newStore(file)
 
 	u, u2, err := s.Append([]byte(content))
 	if err != nil {

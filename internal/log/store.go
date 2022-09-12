@@ -22,7 +22,8 @@ type store struct {
 	size uint64
 }
 
-func NewStore(f *os.File) (*store, error) {
+// newStore creates a file to store records.
+func newStore(f *os.File) (*store, error) {
 	file, err := os.Stat(f.Name())
 	if err != nil {
 		return nil, err
@@ -35,6 +36,9 @@ func NewStore(f *os.File) (*store, error) {
 	}, nil
 }
 
+// Append writes data to file and returns record length, position and error.
+// The first 8 bytes store the length of record so that we know how many bytes to read
+// then we write data to buffer and increment store size = size of data + length of record.
 func (s *store) Append(data []byte) (uint64, uint64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

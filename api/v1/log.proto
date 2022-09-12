@@ -4,6 +4,6 @@ package log.v1;
 option go_package="/api/v1";
 
 message Record {
-  bytes Record = 1;
+  bytes Value = 1;
   uint64 Offset =2;
 }
