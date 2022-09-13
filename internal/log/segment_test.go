@@ -28,7 +28,8 @@ func TestSegment(t *testing.T) {
 		},
 		{
 			arg:       []byte("world"),
-			wantValue: []byte("world")},
+			wantValue: []byte("world"),
+		},
 	}
 
 	for i, tt := range tests {
@@ -59,5 +60,30 @@ func TestSegment(t *testing.T) {
 	})
 	if err != io.EOF {
 		t.Errorf("expected IO.EOF, got %v", err)
+	}
+
+	if !seg.isMaxed() {
+		t.Errorf("isMaxed() exptected to be true")
+	}
+
+	seg, err = newSegment(dir, 0, config)
+	if err != nil {
+		t.Errorf("newSegment() error %v", err.Error())
+	}
+	if !seg.isMaxed() {
+		t.Errorf("isMaxed() exptected to be true")
+	}
+
+	if err := seg.Remove(); err != nil {
+		t.Errorf("Remove() error %v", err.Error())
+	}
+
+	seg, err = newSegment(dir, 0, config)
+	if err != nil {
+		t.Errorf("newSegment() error %v", err.Error())
+	}
+
+	if seg.isMaxed() {
+		t.Errorf("isMaxed() exptected to be false")
 	}
 }
