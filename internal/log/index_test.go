@@ -150,4 +150,5 @@ func Test_Simple_Read_Write(t *testing.T) {
 	if err != io.EOF {
 		t.Errorf("expected EOF, got %v", err.Error())
 	}
+	io.MultiReader()
 }

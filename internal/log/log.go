@@ -2,6 +2,13 @@ package log
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path"
+	api "proglog/api/v1"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -13,34 +20,121 @@ type Record struct {
 }
 
 type Log struct {
-	records []Record
-	mu      sync.Mutex
+	mu sync.RWMutex
+
+	dir    string
+	config Config
+
+	segments      []*segment
+	activeSegment *segment
 }
 
-func NewLog() *Log {
-	return &Log{}
+// NewLog creates a Log instance and
+// setup defaults if the caller didn't specify config.
+func NewLog(dir string, config Config) (*Log, error) {
+	if config.MaxIndexBytes == 0 {
+		config.MaxIndexBytes = 1024
+	}
+
+	if config.MaxStoreBytes == 0 {
+		config.MaxStoreBytes = 1024
+	}
+
+	log := &Log{
+		dir:    dir,
+		config: config,
+	}
+
+	return log, log.setup()
+}
+
+// setup responsible for setting itself up for segments that are already existed on disk.
+// If the Log is new then setting up new segment.
+func (l *Log) setup() error {
+	files, err := os.ReadDir(l.dir)
+	if err != nil {
+		return err
+	}
+
+	var baseOffsets []int64
+	for _, file := range files {
+		offStr := strings.TrimSuffix(file.Name(), path.Ext(file.Name()))
+		off, _ := strconv.ParseInt(offStr, 10, 0)
+		baseOffsets = append(baseOffsets, off)
+	}
+
+	sort.Slice(baseOffsets, func(i, j int) bool {
+		return baseOffsets[i] < baseOffsets[j]
+	})
+
+	for _, baseOffset := range baseOffsets {
+		if err := l.newSegment(uint64(baseOffset)); err != nil {
+			return err
+		}
+	}
+
+	if l.segments == nil {
+		if err := l.newSegment(l.config.InitialOffset); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// newSegments creates new segment and appends to log's segments then
+// makes the new segment active segment.
+func (l *Log) newSegment(offset uint64) error {
+	s, err := newSegment(l.dir, offset, l.config)
+	if err != nil {
+		return err
+	}
+
+	l.segments = append(l.segments, s)
+	l.activeSegment = s
+
+	return nil
 }
 
 // Append appends a record to the log and return that record offset
-func (l *Log) Append(record Record) (uint64, error) {
+func (l *Log) Append(record *api.Record) (uint64, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	record.Offset = uint64(len(l.records))
-	l.records = append(l.records, record)
 
-	return record.Offset, nil
+	off, err := l.activeSegment.Append(record)
+	if err != nil {
+		return 0, err
+	}
+
+	if l.activeSegment.isMaxed() {
+		err := l.newSegment(off + 1)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return off, nil
 }
 
 // Read gets the record with the provided offset
 // if offset is higher than the log records length
 // return ErrorOffsetNotFound
-func (l *Log) Read(offset uint64) (Record, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+func (l *Log) Read(offset uint64) (*api.Record, error) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
 
-	if offset >= uint64(len(l.records)) {
-		return Record{}, ErrorOffsetNotFound
+	var s *segment
+
+	for _, segment := range l.segments {
+		if segment.baseOffset < offset && offset <= segment.nextOffset {
+			s = segment
+			break
+		}
 	}
 
-	return l.records[offset], nil
+	if s == nil || s.nextOffset <= offset {
+		return nil, fmt.Errorf("offset out of range: %d", offset)
+	}
+
+	return s.Read(offset)
 }
