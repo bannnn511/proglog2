@@ -1,7 +1,6 @@
 package log
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -11,8 +10,6 @@ import (
 	"strings"
 	"sync"
 )
-
-var ErrorOffsetNotFound = errors.New("offset not found")
 
 type Record struct {
 	Value  []byte `json:"value"`
@@ -56,10 +53,14 @@ func (l *Log) setup() error {
 		return err
 	}
 
-	var baseOffsets []int64
+	var baseOffsets []uint64
 	for _, file := range files {
-		offStr := strings.TrimSuffix(file.Name(), path.Ext(file.Name()))
-		off, _ := strconv.ParseInt(offStr, 10, 0)
+		// Todo: check duplicate index
+		offStr := strings.TrimSuffix(
+			file.Name(),
+			path.Ext(file.Name()),
+		)
+		off, _ := strconv.ParseUint(offStr, 10, 0)
 		baseOffsets = append(baseOffsets, off)
 	}
 
@@ -116,6 +117,8 @@ func (l *Log) Append(record *api.Record) (uint64, error) {
 	return off, nil
 }
 
+var ErrorOffsetOutOfRange = fmt.Errorf("offset out of range")
+
 // Read gets the record with the provided offset
 // if offset is higher than the log records length
 // return ErrorOffsetNotFound
@@ -126,15 +129,72 @@ func (l *Log) Read(offset uint64) (*api.Record, error) {
 	var s *segment
 
 	for _, segment := range l.segments {
-		if segment.baseOffset < offset && offset <= segment.nextOffset {
+		if segment.baseOffset <= offset && offset < segment.nextOffset {
 			s = segment
 			break
 		}
 	}
 
 	if s == nil || s.nextOffset <= offset {
-		return nil, fmt.Errorf("offset out of range: %d", offset)
+		return nil, ErrorOffsetOutOfRange
 	}
 
 	return s.Read(offset)
+}
+
+func (l *Log) LowestOffset() (uint64, error) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	return l.segments[0].baseOffset, nil
+}
+
+func (l *Log) HighestOffset() (uint64, error) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
+	off := l.segments[len(l.segments)-1].nextOffset
+	if off == 0 {
+		return 0, nil
+	}
+
+	return off - 1, nil
+}
+
+func (l *Log) Close() error {
+	for _, segment := range l.segments {
+		if err := segment.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (l *Log) Remove() error {
+	if err := l.Close(); err != nil {
+		return err
+	}
+
+	return os.RemoveAll(l.dir)
+}
+
+func (l *Log) Truncate(lowest uint64) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	var segments []*segment
+	for _, s := range l.segments {
+		if s.nextOffset <= lowest+1 {
+			if err := s.Remove(); err != nil {
+				return err
+			}
+			continue
+		}
+		segments = append(segments, s)
+	}
+
+	l.segments = segments
+
+	return nil
 }

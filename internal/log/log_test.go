@@ -1,121 +1,117 @@
 package log
 
 import (
-	"reflect"
-	"sync"
+	"bytes"
+	"os"
+	api "proglog/api/v1"
 	"testing"
 )
 
-func TestLog_Append(t *testing.T) {
-	type fields struct {
-		records []Record
+func setupLog() (*Log, error) {
+	dir, _ := os.MkdirTemp("", "log-test")
+
+	c := &Config{}
+	c.Segment.MaxStoreBytes = 32
+	log, err := NewLog(dir, *c)
+	if err != nil {
+		return nil, err
 	}
 
-	type args struct {
-		record Record
+	return log, nil
+}
+
+func TestLog_Append_Read(t *testing.T) {
+	log, err := setupLog()
+	defer log.Remove()
+
+	if err != nil {
+		t.Errorf("setupLog() error ")
+	}
+	value := &api.Record{
+		Value: []byte("value"),
 	}
 
-	tests := []struct {
-		name   string
-		fields fields
-		args   []args
-		want   uint64
-	}{
-		{
-			name: "Test append one record",
-			fields: fields{
-				records: []Record{},
-			},
-			args: []args{{
-				record: Record{},
-			}},
-			want: 0,
-		},
-		{
-			name: "Test append two records",
-			fields: fields{
-				records: []Record{},
-			},
-			args: []args{
-				{
-					record: Record{},
-				},
-				{
-					record: Record{},
-				},
-			},
-			want: 1,
-		},
+	off, err := log.Append(value)
+	if err != nil {
+		t.Errorf("Append() error %v", err)
+		return
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := &Log{
-				records: tt.fields.records,
-				mu:      sync.Mutex{},
-			}
+	read, err := log.Read(off)
+	if err != nil {
+		t.Errorf("Read() error %v", err)
+		return
+	}
 
-			var got uint64 = 0
-			for _, arg := range tt.args {
-				got, _ = l.Append(arg.record)
-			}
-
-			if got != tt.want {
-				t.Errorf("Append() got = %v, want %v", got, tt.want)
-			}
-		})
+	if bytes.Compare(read.Value, value.Value) != 0 {
+		t.Errorf("want %v, got %v", value, read)
+		return
 	}
 }
 
-func TestLog_Read(t *testing.T) {
-	type fields struct {
-		records []Record
-	}
-	type args struct {
-		offset uint64
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    Record
-		wantErr error
-	}{
-		{
-			name: "Test Read at offset 0",
-			fields: fields{
-				records: generateDummyRecords(),
-			},
-			args:    args{offset: 0},
-			want:    Record{Offset: 0, Value: []byte("test 0")},
-			wantErr: ErrorOffsetNotFound,
-		},
-		{
-			name: "Test Read at offset 1",
-			fields: fields{
-				records: generateDummyRecords(),
-			},
-			args:    args{offset: 1},
-			want:    Record{Offset: 1, Value: []byte("test 1")},
-			wantErr: ErrorOffsetNotFound,
-		},
+func TestLog_Out_of_Range(t *testing.T) {
+	log, err := setupLog()
+	defer log.Remove()
+	if err != nil {
+		t.Errorf("setupLog() error ")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			l := &Log{
-				records: tt.fields.records,
-				mu:      sync.Mutex{},
-			}
-			got, err := l.Read(tt.args.offset)
-			if err != nil && err != tt.wantErr {
-				t.Errorf("Read() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Read() got = %v, want %v", got, tt.want)
-			}
-		})
+	_, err = log.Read(1)
+	if err != ErrorOffsetOutOfRange {
+		t.Errorf("expected %v, got %v", ErrorOffsetOutOfRange, err)
+	}
+}
+
+func TestLogExists(t *testing.T) {
+	log, err := setupLog()
+	defer log.Remove()
+
+	if err != nil {
+		t.Errorf("setupLog() error ")
+	}
+	value := &api.Record{
+		Value: []byte("value"),
+	}
+
+	for i := 0; i < 3; i++ {
+		_, err := log.Append(value)
+		if err != nil {
+			t.Errorf("Append() error %v", err)
+			return
+		}
+	}
+
+	off, err := log.LowestOffset()
+	if err != nil {
+		t.Errorf("LowestOffset() error %v", err)
+	}
+	if off != 0 {
+		t.Errorf("got %v, want %v", off, 0)
+	}
+
+	off, err = log.HighestOffset()
+	if err != nil {
+		t.Errorf("HighestOffset() error %v", err)
+	}
+	if off != 2 {
+		t.Errorf("got %v, want %v", off, 2)
+	}
+
+	log2, err := NewLog(log.dir, log.config)
+	off, err = log2.LowestOffset()
+	if err != nil {
+		t.Errorf("LowestOffset() error %v", err)
+	}
+	if off != 0 {
+		t.Errorf("got %v, want %v", off, 0)
+	}
+
+	off, err = log2.HighestOffset()
+	if err != nil {
+		t.Errorf("HighestOffset() error %v", err)
+	}
+	if off != 2 {
+		t.Errorf("got %v, want %v", off, 2)
 	}
 }
 
