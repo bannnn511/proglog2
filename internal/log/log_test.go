@@ -115,15 +115,32 @@ func TestLogExists(t *testing.T) {
 	}
 }
 
-func generateDummyRecords() []Record {
-	return []Record{
-		{
-			Value:  []byte("test 0"),
-			Offset: 0,
-		},
-		{
-			Value:  []byte("test 1"),
-			Offset: 1,
-		},
+func TestLog_Truncate(t *testing.T) {
+	log, err := setupLog()
+	defer log.Remove()
+
+	if err != nil {
+		t.Errorf("setupLog() error ")
+	}
+	value := &api.Record{
+		Value: []byte("value"),
+	}
+
+	for i := 0; i < 3; i++ {
+		_, err := log.Append(value)
+		if err != nil {
+			t.Errorf("Append() error %v", err)
+			return
+		}
+	}
+
+	err = log.Truncate(1)
+	if err != nil {
+		t.Errorf("Truncate() error %v", err)
+	}
+
+	_, err = log.Read(0)
+	if err == nil {
+		t.Errorf("expected error")
 	}
 }

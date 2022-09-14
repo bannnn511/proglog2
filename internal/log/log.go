@@ -16,6 +16,7 @@ type Record struct {
 	Offset uint64 `json:"offset"`
 }
 
+// Log TODO: implement multi-reader for log.
 type Log struct {
 	mu sync.RWMutex
 
@@ -142,6 +143,7 @@ func (l *Log) Read(offset uint64) (*api.Record, error) {
 	return s.Read(offset)
 }
 
+// LowestOffset returns the first segment base offset.
 func (l *Log) LowestOffset() (uint64, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -149,6 +151,7 @@ func (l *Log) LowestOffset() (uint64, error) {
 	return l.segments[0].baseOffset, nil
 }
 
+// HighestOffset returns the last segment next offset - 1.
 func (l *Log) HighestOffset() (uint64, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -161,6 +164,7 @@ func (l *Log) HighestOffset() (uint64, error) {
 	return off - 1, nil
 }
 
+// Close closes all segments in the log.
 func (l *Log) Close() error {
 	for _, segment := range l.segments {
 		if err := segment.Close(); err != nil {
@@ -171,6 +175,7 @@ func (l *Log) Close() error {
 	return nil
 }
 
+// Remove removes everything in log directory.
 func (l *Log) Remove() error {
 	if err := l.Close(); err != nil {
 		return err
@@ -179,6 +184,7 @@ func (l *Log) Remove() error {
 	return os.RemoveAll(l.dir)
 }
 
+// Truncate removes all segments whose highest offset is lower than lowest.
 func (l *Log) Truncate(lowest uint64) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
