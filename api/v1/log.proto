@@ -14,7 +14,7 @@ service log {
 
 // START: apis
 message ProduceRequest {
-  Record recode = 1;
+  Record record = 1;
 }
 
 message ProduceResponse {
@@ -26,7 +26,7 @@ message ConsumeRequest {
 }
 
 message ConsumeResponse {
-  Record recode = 1;
+  Record record = 1;
 }
 // END: apis
 
