@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"os"
 	"path"
 	api "proglog/api/v1"
@@ -118,8 +117,6 @@ func (l *Log) Append(record *api.Record) (uint64, error) {
 	return off, nil
 }
 
-var ErrorOffsetOutOfRange = fmt.Errorf("offset out of range")
-
 // Read gets the record with the provided offset
 // if offset is higher than the log records length
 // return ErrorOffsetNotFound
@@ -137,7 +134,7 @@ func (l *Log) Read(offset uint64) (*api.Record, error) {
 	}
 
 	if s == nil || s.nextOffset <= offset {
-		return nil, ErrorOffsetOutOfRange
+		return nil, api.ErrorOffsetOfOutRange{Offset: offset}
 	}
 
 	return s.Read(offset)

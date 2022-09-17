@@ -57,8 +57,8 @@ func TestLog_Out_of_Range(t *testing.T) {
 	}
 
 	_, err = log.Read(1)
-	if err != ErrorOffsetOutOfRange {
-		t.Errorf("expected %v, got %v", ErrorOffsetOutOfRange, err)
+	if err != err.(api.ErrorOffsetOfOutRange) {
+		t.Errorf("expected %v, got %v", api.ErrorOffsetOfOutRange{}, err)
 	}
 }
 
