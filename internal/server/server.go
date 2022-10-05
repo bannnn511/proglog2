@@ -2,8 +2,18 @@ package server
 
 import (
 	"context"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"go.opencensus.io/plugin/ocgrpc"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/trace"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
+	"log"
 	api "proglog/api/v1"
+	"time"
 )
 
 type Config struct {
@@ -28,8 +38,41 @@ func newgrpcServer(config *Config) (*grpcServer, error) {
 	return grpcServer, nil
 }
 
-func NewGrpcServer(config *Config) (*grpc.Server, error) {
-	grpcServer := grpc.NewServer()
+func NewGrpcServer(config *Config, grpcOpts ...grpc.ServerOption) (*grpc.Server, error) {
+	// START: logger
+	zapLogger := zap.L().Named("server")
+	zapOpts := []grpc_zap.Option{
+		grpc_zap.WithDurationField(func(duration time.Duration) zapcore.Field {
+			return zap.Int64("grpc.time_ns", duration.Nanoseconds())
+		}),
+	}
+	// END: logger
+
+	// START: trace and metrics
+	trace.AlwaysSample()
+	if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
+		log.Fatal(err)
+	}
+	// END: trace and metrics
+
+	// START: grpcOpts
+	grpcOpts = append(grpcOpts,
+		grpc.StreamInterceptor(
+			grpc_middleware.ChainStreamServer(
+				grpc_ctxtags.StreamServerInterceptor(),
+				grpc_zap.StreamServerInterceptor(zapLogger, zapOpts...),
+			),
+		),
+		grpc.UnaryInterceptor(
+			grpc_middleware.ChainUnaryServer(
+				grpc_ctxtags.UnaryServerInterceptor(),
+				grpc_zap.UnaryServerInterceptor(zapLogger, zapOpts...),
+			)),
+	)
+	grpc.StatsHandler(&ocgrpc.ServerHandler{})
+	// ENDs: grpcOpts
+
+	grpcServer := grpc.NewServer(grpcOpts...)
 	srv, err := newgrpcServer(config)
 	if err != nil {
 		return nil, err
