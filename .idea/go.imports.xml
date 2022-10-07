@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GoImports">
+    <option name="excludedPackages">
+      <array>
+        <option value="go.opentelemetry.io/otel/semconv/v1.10.0 as semconv" />
+      </array>
+    </option>
+  </component>
+</project>

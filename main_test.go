@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 )
 
 var (
@@ -28,11 +29,21 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+type test struct {
+	event chan int
+}
+
+func (t test) handle() {
+	for x := range t.event {
+		fmt.Println(x)
+	}
+}
+
 func TestRandom(t *testing.T) {
-	test := []byte("he")
-	out := binary.BigEndian.Uint16(test)
-	//uint32(b[3]) | uint32(b[2])<<8 | uint32(b[1])<<16 | uint32(b[0])<<24
-	fmt.Printf("%b\n", test)
-	fmt.Println(test)
-	fmt.Println(out)
+	test := &test{event: make(chan int)}
+
+	go test.handle()
+
+	test.event <- 1
+	time.Sleep(time.Minute * 1)
 }
