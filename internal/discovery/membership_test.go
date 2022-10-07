@@ -21,7 +21,6 @@ func (h handler) Join(name, addr string) error {
 			name: addr,
 		}
 		h.joins <- joined
-		fmt.Println("joined")
 	}
 
 	return nil
@@ -102,7 +101,6 @@ func TestMemberShip(t *testing.T) {
 	m, _ = setupMember(t, m)
 	m, _ = setupMember(t, m)
 
-	fmt.Println("=====================================", len(h.joins))
 	require.Eventually(
 		t,
 		func() bool {
@@ -119,8 +117,10 @@ func TestMemberShip(t *testing.T) {
 	require.Eventually(
 		t,
 		func() bool {
-			return len(m[0].Members()) == 2 &&
-				len(h.leaves) == 1
+			return len(m[0].Members()) == 3 &&
+				len(h.joins) == 2 &&
+				len(h.leaves) == 1 &&
+				m[0].Members()[2].Status == serf.StatusLeft
 		},
 		time.Second*3,
 		time.Millisecond*250,
