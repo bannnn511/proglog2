@@ -28,10 +28,11 @@ type Handler interface {
 
 // New creates membership and setup serf.
 func New(handler Handler, config Config) (*Membership, error) {
+	logger, _ := zap.NewProduction()
 	mem := &Membership{
 		Config:  config,
 		handler: handler,
-		logger:  zap.L().Named("membership"),
+		logger:  logger.Named("membership"),
 	}
 
 	err := mem.setupSerf()
@@ -126,7 +127,6 @@ func (m *Membership) handleLeave(mem *serf.Member) {
 	if err := m.handler.Leave(mem.Name); err != nil {
 		m.logError(err, "failed to leaves", *mem)
 	}
-
 }
 
 func (m *Membership) logError(err error, msg string, member serf.Member) {
