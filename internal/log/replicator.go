@@ -10,17 +10,19 @@ import (
 
 type replicator struct {
 	mu          sync.Mutex
-	grpcOption  grpc.DialOption
+	DialOptions []grpc.DialOption
 	localServer api.LogServer
 	servers     map[string]chan struct{}
-	logger      zap.Logger
+	logger      *zap.Logger
 	close       chan bool
-	leave       chan bool
 }
 
+// Join appends new server name and address
+// then start replicating to local server.
 func (r *replicator) Join(name, addr string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.init()
 
 	// check if server had already joined.
 	_, ok := r.servers[name]
@@ -34,9 +36,11 @@ func (r *replicator) Join(name, addr string) error {
 	return nil
 }
 
+// Leave removes server from list of servers.
 func (r *replicator) Leave(name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.init()
 
 	server, ok := r.servers[name]
 	if !ok {
@@ -48,11 +52,13 @@ func (r *replicator) Leave(name string) error {
 	return nil
 }
 
+// replicate creates a log client and consume stream
+// from server address then local server will produce new record from the stream.
 func (r *replicator) replicate(addr string, leave chan struct{}) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	cc, err := grpc.Dial(addr, r.grpcOption)
+	cc, err := grpc.Dial(addr, r.DialOptions...)
 	if err != nil {
 		r.logError(err, "grpc.Dial() failed", addr)
 		return
@@ -60,7 +66,8 @@ func (r *replicator) replicate(addr string, leave chan struct{}) {
 
 	logClient := api.NewLogClient(cc)
 
-	stream, err := logClient.ConsumeStream(context.Background(),
+	stream, err := logClient.ConsumeStream(
+		context.Background(),
 		&api.ConsumeRequest{Offset: 0},
 	)
 	if err != nil {
@@ -101,10 +108,38 @@ func (r *replicator) replicate(addr string, leave chan struct{}) {
 	}
 }
 
+// Close stops replicating processes by sending close signal
+// to replicate() go routine.
+func (r *replicator) Close() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.close <- true
+	close(r.close)
+}
+
 func (r *replicator) logError(err error, msg string, addr string) {
 	r.logger.Error(
 		msg,
 		zap.Error(err),
 		zap.String("addr", addr),
 	)
+}
+
+func (r *replicator) init() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.servers == nil {
+		r.servers = make(map[string]chan struct{})
+	}
+
+	if r.logger == nil {
+		logger, _ := zap.NewDevelopment()
+		r.logger = logger.Named("replicator")
+	}
+
+	if r.close == nil {
+		r.close = make(chan bool)
+	}
 }
