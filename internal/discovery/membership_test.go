@@ -5,7 +5,7 @@ import (
 	"github.com/hashicorp/serf/serf"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"net"
+	"proglog/util"
 	"testing"
 	"time"
 )
@@ -70,7 +70,7 @@ func TestMembership_setupSerf(t *testing.T) {
 
 func setupMember(t *testing.T, members []*Membership) ([]*Membership, *handler) {
 	id := len(members)
-	port, err := getFreePort()
+	port, err := util.GetFreePort()
 	require.NoError(t, err, "getFreePort")
 	addr := fmt.Sprintf("%s:%d", "127.0.0.1", port)
 	config := &Config{
@@ -126,18 +126,4 @@ func TestMemberShip(t *testing.T) {
 		time.Millisecond*250,
 	)
 
-}
-
-func getFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
 }

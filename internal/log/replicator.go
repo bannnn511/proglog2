@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-type replicator struct {
+type Replicator struct {
 	mu          sync.Mutex
 	DialOptions []grpc.DialOption
 	localServer api.LogServer
@@ -19,7 +19,7 @@ type replicator struct {
 
 // Join appends new server name and address
 // then start replicating to local server.
-func (r *replicator) Join(name, addr string) error {
+func (r *Replicator) Join(name, addr string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.init()
@@ -37,7 +37,7 @@ func (r *replicator) Join(name, addr string) error {
 }
 
 // Leave removes server from list of servers.
-func (r *replicator) Leave(name string) error {
+func (r *Replicator) Leave(name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.init()
@@ -54,7 +54,7 @@ func (r *replicator) Leave(name string) error {
 
 // replicate creates a log client and consume stream
 // from server address then local server will produce new record from the stream.
-func (r *replicator) replicate(addr string, leave chan struct{}) {
+func (r *Replicator) replicate(addr string, leave chan struct{}) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -110,7 +110,7 @@ func (r *replicator) replicate(addr string, leave chan struct{}) {
 
 // Close stops replicating processes by sending close signal
 // to replicate() go routine.
-func (r *replicator) Close() {
+func (r *Replicator) Close() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -118,7 +118,7 @@ func (r *replicator) Close() {
 	close(r.close)
 }
 
-func (r *replicator) logError(err error, msg string, addr string) {
+func (r *Replicator) logError(err error, msg string, addr string) {
 	r.logger.Error(
 		msg,
 		zap.Error(err),
@@ -126,7 +126,7 @@ func (r *replicator) logError(err error, msg string, addr string) {
 	)
 }
 
-func (r *replicator) init() {
+func (r *Replicator) init() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -136,7 +136,7 @@ func (r *replicator) init() {
 
 	if r.logger == nil {
 		logger, _ := zap.NewDevelopment()
-		r.logger = logger.Named("replicator")
+		r.logger = logger.Named("Replicator")
 	}
 
 	if r.close == nil {
