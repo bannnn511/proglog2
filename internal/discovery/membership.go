@@ -28,11 +28,11 @@ type Handler interface {
 
 // New creates membership and setup serf.
 func New(handler Handler, config Config) (*Membership, error) {
-	logger, _ := zap.NewProduction()
+	//logger, _ := zap.NewProduction()
 	mem := &Membership{
 		Config:  config,
 		handler: handler,
-		logger:  logger.Named("membership"),
+		logger:  zap.L().Named("membership"),
 	}
 
 	err := mem.setupSerf()

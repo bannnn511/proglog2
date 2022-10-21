@@ -11,7 +11,7 @@ import (
 type Replicator struct {
 	mu          sync.Mutex
 	DialOptions []grpc.DialOption
-	LocalServer api.LogServer
+	LocalServer api.LogClient
 	servers     map[string]chan struct{}
 	logger      *zap.Logger
 	close       chan bool
@@ -83,7 +83,6 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 				r.logError(err, "failed to receive", addr)
 				return
 			}
-
 			record <- res.Record
 		}
 	}()
@@ -110,12 +109,14 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 
 // Close stops replicating processes by sending close signal
 // to replicate() go routine.
-func (r *Replicator) Close() {
+func (r *Replicator) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	r.close <- true
 	close(r.close)
+
+	return nil
 }
 
 func (r *Replicator) logError(err error, msg string, addr string) {

@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"net"
+	v1 "proglog/api/v1"
 	"proglog/internal/discovery"
 	"proglog/internal/log"
 	"proglog/internal/server"
@@ -14,6 +15,7 @@ import (
 
 type Agent struct {
 	Config
+	replicator   *log.Replicator
 	Log          *log.Log
 	Server       *grpc.Server
 	Membership   *discovery.Membership
@@ -47,6 +49,9 @@ func New(config Config) (*Agent, error) {
 		}
 	}
 
+	rpcAddr, _ := agent.RPCAddr()
+	fmt.Printf("Agent config %v, bindAddr %v, rpcPort %v\n", agent.BindAddr, agent.RpcPort, rpcAddr)
+
 	return agent, nil
 }
 
@@ -60,10 +65,10 @@ func (c Config) RPCAddr() (string, error) {
 
 // setupLogger setups zap logger.
 func (a *Agent) setupLogger() error {
-	logger, err := zap.NewProduction()
-	if err != nil {
-		return err
-	}
+	logger := zap.L()
+	//if err != nil {
+	//	return err
+	//}
 	zap.ReplaceGlobals(logger.Named("Agent"))
 
 	return nil
@@ -125,13 +130,29 @@ func (a *Agent) setupMembership() error {
 		},
 	}
 
+	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	target, err := a.RPCAddr()
+	if err != nil {
+		return err
+	}
+
+	cc, err := grpc.Dial(target, clientOptions...)
+	if err != nil {
+		return err
+	}
+
+	localServer := v1.NewLogClient(cc)
+	if err != nil {
+		return err
+	}
+
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	replicator := &log.Replicator{
-		//LocalServer: ,
+	a.replicator = &log.Replicator{
+		LocalServer: localServer,
 		DialOptions: opts,
 	}
 	membership, err := discovery.New(
-		replicator,
+		a.replicator,
 		config,
 	)
 	if err != nil {
@@ -148,11 +169,12 @@ func (a *Agent) shutdown() error {
 
 	shutdownFuncs := []func() error{
 		a.Membership.Leave,
-		a.Log.Close,
+		a.replicator.Close,
 		func() error {
 			a.Server.GracefulStop()
 			return nil
 		},
+		a.Log.Close,
 	}
 
 	for _, shutdownFunc := range shutdownFuncs {

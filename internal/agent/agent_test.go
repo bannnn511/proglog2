@@ -10,6 +10,7 @@ import (
 	api "proglog/api/v1"
 	"proglog/util"
 	"testing"
+	"time"
 )
 
 func TestAgent(t *testing.T) {
@@ -48,6 +49,7 @@ func TestAgent(t *testing.T) {
 
 	// START: Handle shutting down agents
 	defer func() {
+		fmt.Println("shutting down agents ------------")
 		for _, agent := range agents {
 			err := agent.shutdown()
 			require.NoError(t, err, "agent shutdown error")
@@ -56,6 +58,7 @@ func TestAgent(t *testing.T) {
 	}()
 	// END: Handle shutting down agents
 
+	time.Sleep(3 * time.Second)
 	// START: Leader log client
 	leaderClient, err := client(agents[0])
 	require.NoError(t, err, "error create leader client")
@@ -80,19 +83,19 @@ func TestAgent(t *testing.T) {
 	// END: Leader log client
 
 	// START: Test consumer
-	//consumerClient, err := client(agents[1])
-	//require.NoError(t, err, "error create client 1")
+	consumerClient, err := client(agents[1])
+	require.NoError(t, err, "error create client 1")
 
-	// wait for replication
-	//time.Sleep(3 * time.Second)
-	//response, err := consumerClient.Consume(
-	//	context.Background(),
-	//	&api.ConsumeRequest{
-	//		Offset: leaderResponse.Offset,
-	//	},
-	//)
-	//require.NoError(t, err, "consumer consume error")
-	//require.Equal(t, string(response.Record.Value), message)
+	//wait for replication
+	time.Sleep(3 * time.Second)
+	response, err := consumerClient.Consume(
+		context.Background(),
+		&api.ConsumeRequest{
+			Offset: leaderResponse.Offset,
+		},
+	)
+	require.NoError(t, err, "consumer consume error")
+	require.Equal(t, string(response.Record.Value), message)
 }
 
 func client(agent *Agent) (api.LogClient, error) {
