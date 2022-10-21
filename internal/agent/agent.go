@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"net"
 	"proglog/internal/discovery"
 	"proglog/internal/log"
@@ -23,6 +24,7 @@ type Config struct {
 	DataDir            string
 	NodeName           string
 	BindAddr           string
+	RpcPort            int
 	StartJoinAddresses []string
 }
 
@@ -46,6 +48,14 @@ func New(config Config) (*Agent, error) {
 	}
 
 	return agent, nil
+}
+
+func (c Config) RPCAddr() (string, error) {
+	host, _, err := net.SplitHostPort(c.BindAddr)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s:%d", host, c.RpcPort), nil
 }
 
 // setupLogger setups zap logger.
@@ -75,7 +85,11 @@ func (a *Agent) setupServer() error {
 		CommitLog: a.Log,
 	}
 
-	l, err := net.Listen("tcp", a.BindAddr)
+	serverPort, err := a.RPCAddr()
+	if err != nil {
+		return err
+	}
+	l, err := net.Listen("tcp", serverPort)
 	if err != nil {
 		return err
 	}
@@ -97,13 +111,29 @@ func (a *Agent) setupServer() error {
 }
 
 func (a *Agent) setupMembership() error {
+	rpcAddr, err := a.Config.RPCAddr()
+	if err != nil {
+		return err
+	}
+
 	config := discovery.Config{
 		NodeName:           a.NodeName,
 		BindAddr:           a.BindAddr,
 		StartJoinAddresses: a.StartJoinAddresses,
+		Tags: map[string]string{
+			"rpc_addr": rpcAddr,
+		},
 	}
 
-	membership, err := discovery.New(&log.Replicator{}, config)
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	replicator := &log.Replicator{
+		//LocalServer: ,
+		DialOptions: opts,
+	}
+	membership, err := discovery.New(
+		replicator,
+		config,
+	)
 	if err != nil {
 		return err
 	}
@@ -120,7 +150,6 @@ func (a *Agent) shutdown() error {
 		a.Membership.Leave,
 		a.Log.Close,
 		func() error {
-			fmt.Println("agent here", a.Server)
 			a.Server.GracefulStop()
 			return nil
 		},

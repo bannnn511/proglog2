@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -13,6 +14,8 @@ import (
 
 func TestAgent(t *testing.T) {
 	var agents []*Agent
+
+	// START: Setup Agent
 	for i := 0; i < 3; i++ {
 		dataDir, err := os.MkdirTemp("", "agent-test-log")
 		require.NoError(t, err, "error create temp dir for agent")
@@ -20,6 +23,9 @@ func TestAgent(t *testing.T) {
 		port, err := util.GetFreePort()
 		require.NoError(t, err, "getFreePort")
 		addr := fmt.Sprintf("%s:%d", "127.0.0.1", port)
+
+		rpcPort, err := util.GetFreePort()
+		require.NoError(t, err, "getFreePort")
 
 		var startJoinAddresses []string
 		if i != 0 {
@@ -30,6 +36,7 @@ func TestAgent(t *testing.T) {
 			DataDir:            dataDir,
 			NodeName:           fmt.Sprintf("Node No.%v", i),
 			BindAddr:           addr,
+			RpcPort:            rpcPort,
 			StartJoinAddresses: startJoinAddresses,
 		}
 
@@ -37,6 +44,9 @@ func TestAgent(t *testing.T) {
 		require.NoError(t, err, "create agent error")
 		agents = append(agents, agent)
 	}
+	// END: Setup Agent
+
+	// START: Handle shutting down agents
 	defer func() {
 		for _, agent := range agents {
 			err := agent.shutdown()
@@ -44,24 +54,56 @@ func TestAgent(t *testing.T) {
 			require.NoError(t, os.RemoveAll(agent.DataDir))
 		}
 	}()
+	// END: Handle shutting down agents
 
-	//leaderClient, err := client(agents[0])
-	//require.NoError(t, err, "error create leader client")
+	// START: Leader log client
+	leaderClient, err := client(agents[0])
+	require.NoError(t, err, "error create leader client")
 
-	//_, err = leaderClient.Produce(
+	message := "hello"
+	leaderResponse, err := leaderClient.Produce(
+		context.Background(),
+		&api.ProduceRequest{
+			Record: &api.Record{
+				Value: []byte(message),
+			},
+		},
+	)
+	require.NoError(t, err, "leader produce error")
+
+	consume, err := leaderClient.Consume(
+		context.Background(),
+		&api.ConsumeRequest{Offset: leaderResponse.Offset},
+	)
+	require.NoError(t, err, "leader client consume error")
+	require.Equal(t, string(consume.Record.Value), message, "produce and consume must have equal value")
+	// END: Leader log client
+
+	// START: Test consumer
+	//consumerClient, err := client(agents[1])
+	//require.NoError(t, err, "error create client 1")
+
+	// wait for replication
+	//time.Sleep(3 * time.Second)
+	//response, err := consumerClient.Consume(
 	//	context.Background(),
-	//	&api.ProduceRequest{
-	//		Record: &api.Record{
-	//			Value: []byte("hello"),
-	//		},
+	//	&api.ConsumeRequest{
+	//		Offset: leaderResponse.Offset,
 	//	},
 	//)
-	//require.NoError(t, err, "leader produce error")
+	//require.NoError(t, err, "consumer consume error")
+	//require.Equal(t, string(response.Record.Value), message)
 }
 
 func client(agent *Agent) (api.LogClient, error) {
 	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	cc, err := grpc.Dial(agent.BindAddr, clientOptions...)
+	target, err := agent.RPCAddr()
+	if err != nil {
+		return nil, err
+	}
+
+	cc, err := grpc.Dial(target, clientOptions...)
+
 	if err != nil {
 		return nil, err
 	}

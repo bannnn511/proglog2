@@ -58,7 +58,7 @@ func (m *Membership) setupSerf() error {
 	serfConfig.MemberlistConfig.BindPort = tcpAddr.Port
 	m.events = make(chan serf.Event)
 	serfConfig.EventCh = m.events
-	serfConfig.Tags = m.Tags
+	serfConfig.Tags = m.Config.Tags
 	serfConfig.NodeName = m.NodeName
 	serfConfig.Init()
 	mSerf, err := serf.Create(serfConfig)

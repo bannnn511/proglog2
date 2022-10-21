@@ -11,7 +11,7 @@ import (
 type Replicator struct {
 	mu          sync.Mutex
 	DialOptions []grpc.DialOption
-	localServer api.LogServer
+	LocalServer api.LogServer
 	servers     map[string]chan struct{}
 	logger      *zap.Logger
 	close       chan bool
@@ -95,7 +95,7 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 		case <-leave:
 			return
 		case data := <-record:
-			_, err := r.localServer.Produce(context.Background(),
+			_, err := r.LocalServer.Produce(context.Background(),
 				&api.ProduceRequest{
 					Record: data,
 				},
@@ -127,8 +127,6 @@ func (r *Replicator) logError(err error, msg string, addr string) {
 }
 
 func (r *Replicator) init() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 
 	if r.servers == nil {
 		r.servers = make(map[string]chan struct{})
