@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/examples/exporter"
 	"go.uber.org/zap"
@@ -24,7 +23,6 @@ var debug = flag.Bool("debug", true, "Enable observability for debugging.")
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if *debug {
-		fmt.Println("debug mode")
 		logger, err := zap.NewDevelopment()
 		if err != nil {
 			panic(err)
@@ -40,9 +38,9 @@ func TestServer(t *testing.T) {
 		client api.LogClient,
 		config *Config,
 	){
-		"produce/consume a message to/from the log succeeds": testProduceConsume,
-		"produce/consume stream succeeds":                    testProduceConsumeStream,
-		"consume past log boundary fails":                    testConsumePastBoundary,
+		//"produce/consume a message to/from the log succeeds": testProduceConsume,
+		"produce/consume stream succeeds": testProduceConsumeStream,
+		//"consume past log boundary fails":                    testConsumePastBoundary,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			client, config, teardown := setupTest(t, nil)

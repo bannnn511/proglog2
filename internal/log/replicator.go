@@ -2,19 +2,23 @@ package log
 
 import (
 	"context"
+	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	api "proglog/api/v1"
 	"sync"
+	"time"
 )
 
 type Replicator struct {
+	NodeName    string
 	mu          sync.Mutex
 	DialOptions []grpc.DialOption
 	LocalServer api.LogClient
 	servers     map[string]chan struct{}
 	logger      *zap.Logger
 	close       chan bool
+	isClosed    bool
 }
 
 // Join appends new server name and address
@@ -46,6 +50,7 @@ func (r *Replicator) Leave(name string) error {
 	if !ok {
 		return nil
 	}
+
 	close(server)
 	delete(r.servers, name)
 
@@ -55,14 +60,20 @@ func (r *Replicator) Leave(name string) error {
 // replicate creates a log client and consume stream
 // from server address then local server will produce new record from the stream.
 func (r *Replicator) replicate(addr string, leave chan struct{}) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	cc, err := grpc.Dial(addr, r.DialOptions...)
 	if err != nil {
 		r.logError(err, "grpc.Dial() failed", addr)
 		return
 	}
+	defer cc.Close()
+
+	logger, _ := zap.NewDevelopment()
+	logger.Sugar()
+	logger.Sugar()
+	logger.Info("DIALING CLIENT-----",
+		zap.String("current node", r.NodeName),
+		zap.String("dialling addr", addr),
+	)
 
 	logClient := api.NewLogClient(cc)
 
@@ -83,6 +94,8 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 				r.logError(err, "failed to receive", addr)
 				return
 			}
+			//fmt.Println("stream recv", r.NodeName, res.Record.Offset, string(res.Record.Value))
+
 			record <- res.Record
 		}
 	}()
@@ -94,6 +107,7 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 		case <-leave:
 			return
 		case data := <-record:
+			fmt.Println("[PRODUCE]", r.NodeName, data.Offset, string(data.Value))
 			_, err := r.LocalServer.Produce(context.Background(),
 				&api.ProduceRequest{
 					Record: data,
@@ -103,6 +117,8 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 				r.logError(err, "cannot produce record", addr)
 				return
 			}
+			time.Sleep(100 * time.Millisecond)
+
 		}
 	}
 }
@@ -113,7 +129,11 @@ func (r *Replicator) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.close <- true
+	if r.isClosed {
+		return nil
+	}
+	r.isClosed = true
+
 	close(r.close)
 
 	return nil

@@ -20,6 +20,7 @@ type Agent struct {
 	Server       *grpc.Server
 	Membership   *discovery.Membership
 	shutdownLock sync.Mutex
+	isShutdown   bool
 }
 
 type Config struct {
@@ -48,9 +49,6 @@ func New(config Config) (*Agent, error) {
 			return nil, err
 		}
 	}
-
-	rpcAddr, _ := agent.RPCAddr()
-	fmt.Printf("Agent config %v, bindAddr %v, rpcPort %v\n", agent.BindAddr, agent.RpcPort, rpcAddr)
 
 	return agent, nil
 }
@@ -94,6 +92,7 @@ func (a *Agent) setupServer() error {
 	if err != nil {
 		return err
 	}
+
 	l, err := net.Listen("tcp", serverPort)
 	if err != nil {
 		return err
@@ -148,6 +147,7 @@ func (a *Agent) setupMembership() error {
 
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	a.replicator = &log.Replicator{
+		NodeName:    a.NodeName,
 		LocalServer: localServer,
 		DialOptions: opts,
 	}
@@ -167,7 +167,12 @@ func (a *Agent) shutdown() error {
 	a.shutdownLock.Lock()
 	defer a.shutdownLock.Unlock()
 
-	shutdownFuncs := []func() error{
+	if a.isShutdown {
+		return nil
+	}
+	a.isShutdown = true
+
+	shutdownFunctions := []func() error{
 		a.Membership.Leave,
 		a.replicator.Close,
 		func() error {
@@ -177,7 +182,7 @@ func (a *Agent) shutdown() error {
 		a.Log.Close,
 	}
 
-	for _, shutdownFunc := range shutdownFuncs {
+	for _, shutdownFunc := range shutdownFunctions {
 		err := shutdownFunc()
 		if err != nil {
 			return err

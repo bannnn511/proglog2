@@ -2,6 +2,7 @@ package log
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	api "proglog/api/v1"
 	"testing"
@@ -36,6 +37,7 @@ func TestLog_Append_Read(t *testing.T) {
 		t.Errorf("Append() error %v", err)
 		return
 	}
+	fmt.Println(off)
 
 	read, err := log.Read(off)
 	if err != nil {
