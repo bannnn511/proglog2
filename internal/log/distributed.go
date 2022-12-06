@@ -1,12 +1,16 @@
 package log
 
 import (
+	"bytes"
 	"crypto/tls"
+	"errors"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"google.golang.org/protobuf/proto"
 	"net"
 	"os"
 	"path/filepath"
+	api "proglog/api/v1"
 	"time"
 )
 
@@ -17,6 +21,8 @@ type DistributedLog struct {
 	raft   *raft.Raft
 }
 
+// NewDistributedLog creates a new distributed log.
+// It will create a new log and raft instance.
 func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
 	d := &DistributedLog{
 		config: config,
@@ -156,6 +162,50 @@ func (d *DistributedLog) setupRaft(dataDir string) error {
 	// END: raft
 
 	return nil
+}
+
+type RequestType uint8
+
+const (
+	AppendRequestType RequestType = iota
+)
+
+func (d *DistributedLog) Append(record *api.Record) (uint64, error) {
+	response, err := d.apply(AppendRequestType, record)
+	if err != nil {
+		return 0, err
+	}
+
+	produceResponse, ok := response.(api.ProduceResponse)
+	if !ok {
+		return 0, errors.New("response not type ProduceResponse")
+	}
+
+	return produceResponse.Offset, nil
+}
+
+// apply wraps Raft's api to apply request and return response.
+func (d *DistributedLog) apply(requestType RequestType, message proto.Message) (interface{}, error) {
+	var buf bytes.Buffer
+	buf.Write([]byte{byte(requestType)})
+	marshal, err := proto.Marshal(message)
+	if err != nil {
+		return nil, err
+	}
+	buf.Write(marshal)
+
+	timeout := 10 * time.Second
+	applyFuture := d.raft.Apply(buf.Bytes(), timeout)
+	if applyFuture.Error() != nil {
+		return nil, err
+	}
+
+	return applyFuture.Response(), nil
+}
+
+// Reade is eventually consistent read.
+func (d *DistributedLog) Read(offset uint64) (*api.Record, error) {
+	return d.Log.Read(offset)
 }
 
 type StreamLayer struct {
