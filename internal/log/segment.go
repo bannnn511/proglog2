@@ -34,7 +34,7 @@ func newSegment(dir string, baseOffset uint64, config Config) (*segment, error) 
 		return nil, err
 	}
 
-	s.store, err = newStore(storeFile)
+	s.store, err = newLogStore(storeFile)
 	if err != nil {
 		return nil, err
 	}

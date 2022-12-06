@@ -2,7 +2,6 @@ package log
 
 import (
 	"context"
-	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	api "proglog/api/v1"
@@ -67,14 +66,6 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 	}
 	defer cc.Close()
 
-	logger, _ := zap.NewDevelopment()
-	logger.Sugar()
-	logger.Sugar()
-	logger.Info("DIALING CLIENT-----",
-		zap.String("current node", r.NodeName),
-		zap.String("dialling addr", addr),
-	)
-
 	logClient := api.NewLogClient(cc)
 
 	stream, err := logClient.ConsumeStream(
@@ -107,7 +98,6 @@ func (r *Replicator) replicate(addr string, leave chan struct{}) {
 		case <-leave:
 			return
 		case data := <-record:
-			fmt.Println("[PRODUCE]", r.NodeName, data.Offset, string(data.Value))
 			_, err := r.LocalServer.Produce(context.Background(),
 				&api.ProduceRequest{
 					Record: data,
