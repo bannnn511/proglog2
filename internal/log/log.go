@@ -1,6 +1,7 @@
 package log
 
 import (
+	"github.com/hashicorp/raft"
 	"os"
 	"path"
 	api "proglog/api/v1"
@@ -24,6 +25,36 @@ type Log struct {
 
 	segments      []*segment
 	activeSegment *segment
+}
+
+func (l *Log) FirstIndex() (uint64, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (l *Log) LastIndex() (uint64, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (l *Log) GetLog(index uint64, log *raft.Log) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (l *Log) StoreLog(log *raft.Log) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (l *Log) StoreLogs(logs []*raft.Log) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (l *Log) DeleteRange(min, max uint64) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 // NewLog creates a Log instance and

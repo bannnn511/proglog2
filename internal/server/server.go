@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -146,7 +145,6 @@ func (s *grpcServer) ConsumeStream(
 				return err
 			}
 
-			fmt.Println("[RESP CONSUME]", res.Record.Offset)
 			if err = stream.Send(res); err != nil {
 				return err
 			}
@@ -154,5 +152,4 @@ func (s *grpcServer) ConsumeStream(
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-	return nil
 }

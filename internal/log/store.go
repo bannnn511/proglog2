@@ -22,8 +22,8 @@ type store struct {
 	size uint64
 }
 
-// newStore creates a file to store records.
-func newStore(f *os.File) (*store, error) {
+// newLogStore creates a file to store records.
+func newLogStore(f *os.File) (*store, error) {
 	file, err := os.Stat(f.Name())
 	if err != nil {
 		return nil, err
