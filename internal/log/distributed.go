@@ -4,22 +4,28 @@ import (
 	"bytes"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	api "proglog/api/v1"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"google.golang.org/protobuf/proto"
 )
+
+const DebugMode = 1
 
 // DistributedLog is a distributed Log with raft for handling consensus.
 type DistributedLog struct {
 	config Config
 	Log    *Log
 	raft   *raft.Raft
+	logger *zap.SugaredLogger
 }
 
 // NewDistributedLog creates a new distributed log.
@@ -37,12 +43,18 @@ func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
 		return nil, err
 	}
 
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+	d.logger = logger.Sugar()
+
 	return d, nil
 }
 
 // setupLog creates the log for this server, where the server will store user's records.
 func (d *DistributedLog) setupLog(dataDir string) error {
-	directoryPath := dataDir + "/log"
+	directoryPath := filepath.Join(dataDir, "log")
 	err := os.MkdirAll(directoryPath, 0755)
 	if err != nil {
 		return err
@@ -75,13 +87,8 @@ func (d *DistributedLog) setupRaft(dataDir string) error {
 	// END: log store where Raft will store commands.
 
 	// START: stable store where Raft will store metadata.
-	stableDirectory := filepath.Join(dataDir, "raft", "stable")
-	if err = os.MkdirAll(stableDirectory, 0755); err != nil {
-		return err
-	}
-
 	boltStore, err := raftboltdb.New(raftboltdb.Options{
-		Path: filepath.Join(stableDirectory),
+		Path: filepath.Join(dataDir, "raft", "stable"),
 	})
 	if err != nil {
 		return err
@@ -151,18 +158,16 @@ func (d *DistributedLog) setupRaft(dataDir string) error {
 		bootstrapConfig := raft.Configuration{
 			Servers: []raft.Server{
 				{
-					ID: d.config.Raft.LocalID,
+					ID:      d.config.Raft.Config.LocalID,
+					Address: transport.LocalAddr(),
 				},
 			},
 		}
-		err := raft.BootstrapCluster(raftConfig, logStore, boltStore, snapshotStore, transport, bootstrapConfig)
-		if err != nil {
-			return err
-		}
+		err = d.raft.BootstrapCluster(bootstrapConfig).Error()
 	}
 	// END: raft
 
-	return nil
+	return err
 }
 
 type RequestType uint8
@@ -234,29 +239,49 @@ func (d *DistributedLog) Join(id, addr string) error {
 	return nil
 }
 
-func (d *DistributedLog) Leave() error {
-	indexFuture := d.raft.RemoveServer(d.config.Raft.LocalID, 0, 0)
+func (d *DistributedLog) Leave(id string) error {
+	indexFuture := d.raft.RemoveServer(raft.ServerID(id), 0, 0)
 	return indexFuture.Error()
 }
 
 func (d *DistributedLog) WaitForLeader(timeout time.Duration) error {
 	timeoutC := time.After(timeout)
 	ticker := time.NewTicker(time.Second)
-	for {
-		select {
-		case <-timeoutC:
+	select {
+	case <-timeoutC:
+		err := errors.New("timeout waiting for leader")
+		d.error(err.Error())
+
+		return err
+	case <-ticker.C:
+		addr, id := d.raft.LeaderWithID()
+		d.slog("leader is %s at %s", "id", id, "addr", addr)
+		if id == "" {
 			return nil
-		case <-ticker.C:
-			id, _ := d.raft.LeaderWithID()
-			if id == "" {
-				return nil
-			}
 		}
 	}
+
+	return nil
 }
 
 func (d *DistributedLog) Close() error {
 	return d.raft.Shutdown().Error()
+}
+
+// slog logs a debugging message is DebugCM > 0.
+func (d *DistributedLog) slog(format string, args ...interface{}) {
+	if DebugMode > 0 {
+		format = fmt.Sprintf("[%v] ", d.config.Raft.LocalID) + format
+		d.logger.Infow(format, args...)
+	}
+}
+
+// slog logs a debugging message is DebugCM > 0.
+func (d *DistributedLog) error(format string, args ...interface{}) {
+	if DebugMode > 0 {
+		format = fmt.Sprintf("[%v] ", d.config.Raft.LocalID) + format
+		d.logger.Errorf(format, args...)
+	}
 }
 
 // END: Service Discovery handler
