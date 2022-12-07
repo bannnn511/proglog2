@@ -23,7 +23,12 @@ func setupLog() (*Log, error) {
 
 func TestLog_Append_Read(t *testing.T) {
 	log, err := setupLog()
-	defer log.Remove()
+	defer func(log *Log) {
+		err := log.Remove()
+		if err != nil {
+			t.Errorf("Remove() error %v", err)
+		}
+	}(log)
 
 	if err != nil {
 		t.Errorf("setupLog() error ")
@@ -45,7 +50,7 @@ func TestLog_Append_Read(t *testing.T) {
 		return
 	}
 
-	if bytes.Compare(read.Value, value.Value) != 0 {
+	if !bytes.Equal(read.Value, value.Value) {
 		t.Errorf("want %v, got %v", value, read)
 		return
 	}
@@ -53,7 +58,13 @@ func TestLog_Append_Read(t *testing.T) {
 
 func TestLog_Out_of_Range(t *testing.T) {
 	log, err := setupLog()
-	defer log.Remove()
+	defer func(log *Log) {
+		err := log.Remove()
+		if err != nil {
+			t.Errorf("Remove() error %v", err)
+		}
+	}(log)
+
 	if err != nil {
 		t.Errorf("setupLog() error ")
 	}
@@ -66,7 +77,12 @@ func TestLog_Out_of_Range(t *testing.T) {
 
 func TestLogExists(t *testing.T) {
 	log, err := setupLog()
-	defer log.Remove()
+	defer func(log *Log) {
+		err := log.Remove()
+		if err != nil {
+			t.Errorf("Remove() error %v", err)
+		}
+	}(log)
 
 	if err != nil {
 		t.Errorf("setupLog() error ")
@@ -100,6 +116,10 @@ func TestLogExists(t *testing.T) {
 	}
 
 	log2, err := NewLog(log.dir, log.config)
+	if err != nil {
+		t.Errorf("NewLog() error %v", err)
+	}
+
 	off, err = log2.LowestOffset()
 	if err != nil {
 		t.Errorf("LowestOffset() error %v", err)
@@ -119,7 +139,12 @@ func TestLogExists(t *testing.T) {
 
 func TestLog_Truncate(t *testing.T) {
 	log, err := setupLog()
-	defer log.Remove()
+	defer func(log *Log) {
+		err := log.Remove()
+		if err != nil {
+			t.Errorf("Remove() error %v", err)
+		}
+	}(log)
 
 	if err != nil {
 		t.Errorf("setupLog() error ")

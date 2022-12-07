@@ -50,7 +50,7 @@ func TestSegment(t *testing.T) {
 			t.Errorf("Append() error %v", err.Error())
 		}
 
-		if bytes.Compare(tt.wantValue, got.Value) != 0 {
+		if !bytes.Equal(tt.wantValue, got.Value) {
 			t.Errorf("want %v, got %v", tt.wantValue, got)
 		}
 	}

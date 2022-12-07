@@ -2,18 +2,19 @@ package server
 
 import (
 	"context"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"log"
+	api "proglog/api/v1"
+	"time"
+
+	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
-	"log"
-	api "proglog/api/v1"
-	"time"
 )
 
 type Config struct {
@@ -41,15 +42,15 @@ func newgrpcServer(config *Config) (*grpcServer, error) {
 func NewGrpcServer(config *Config, grpcOpts ...grpc.ServerOption) (*grpc.Server, error) {
 	// START: logger
 	zapLogger := zap.L().Named("server")
-	zapOpts := []grpc_zap.Option{
-		grpc_zap.WithDurationField(func(duration time.Duration) zapcore.Field {
+	zapOpts := []grpczap.Option{
+		grpczap.WithDurationField(func(duration time.Duration) zapcore.Field {
 			return zap.Int64("grpc.time_ns", duration.Nanoseconds())
 		}),
 	}
 	// END: logger
 
 	// START: trace and metrics
-	trace.AlwaysSample()
+	_ = trace.AlwaysSample()
 	if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
 		log.Fatal(err)
 	}
@@ -58,15 +59,15 @@ func NewGrpcServer(config *Config, grpcOpts ...grpc.ServerOption) (*grpc.Server,
 	// START: grpcOpts
 	grpcOpts = append(grpcOpts,
 		grpc.StreamInterceptor(
-			grpc_middleware.ChainStreamServer(
-				grpc_ctxtags.StreamServerInterceptor(),
-				grpc_zap.StreamServerInterceptor(zapLogger, zapOpts...),
+			grpcmiddleware.ChainStreamServer(
+				grpcctxtags.StreamServerInterceptor(),
+				grpczap.StreamServerInterceptor(zapLogger, zapOpts...),
 			),
 		),
 		grpc.UnaryInterceptor(
-			grpc_middleware.ChainUnaryServer(
-				grpc_ctxtags.UnaryServerInterceptor(),
-				grpc_zap.UnaryServerInterceptor(zapLogger, zapOpts...),
+			grpcmiddleware.ChainUnaryServer(
+				grpcctxtags.UnaryServerInterceptor(),
+				grpczap.UnaryServerInterceptor(zapLogger, zapOpts...),
 			)),
 	)
 	grpc.StatsHandler(&ocgrpc.ServerHandler{})

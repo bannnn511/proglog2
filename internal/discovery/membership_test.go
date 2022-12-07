@@ -2,12 +2,12 @@ package discovery
 
 import (
 	"fmt"
-	"github.com/hashicorp/serf/serf"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"proglog/util"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/serf/serf"
+	"github.com/stretchr/testify/require"
 )
 
 type handler struct {
@@ -38,9 +38,6 @@ func TestMembership_setupSerf(t *testing.T) {
 	type fields struct {
 		Config  Config
 		handler Handler
-		serf    *serf.Serf
-		events  chan serf.Event
-		logger  *zap.Logger
 	}
 	tests := []struct {
 		name   string

@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"crypto/tls"
 	"errors"
-	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb"
-	"google.golang.org/protobuf/proto"
 	"net"
 	"os"
 	"path/filepath"
 	api "proglog/api/v1"
 	"time"
+
+	"github.com/hashicorp/raft"
+	raftboltdb "github.com/hashicorp/raft-boltdb"
+	"google.golang.org/protobuf/proto"
 )
 
 // DistributedLog is a distributed Log with raft for handling consensus.
@@ -176,7 +177,7 @@ func (d *DistributedLog) Append(record *api.Record) (uint64, error) {
 		return 0, err
 	}
 
-	produceResponse, ok := response.(api.ProduceResponse)
+	produceResponse, ok := response.(*api.ProduceResponse)
 	if !ok {
 		return 0, errors.New("response not type ProduceResponse")
 	}

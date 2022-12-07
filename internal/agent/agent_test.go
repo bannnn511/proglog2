@@ -3,14 +3,15 @@ package agent
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"os"
 	api "proglog/api/v1"
 	"proglog/util"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestAgent(t *testing.T) {

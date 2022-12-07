@@ -4,18 +4,19 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"github.com/stretchr/testify/require"
-	"go.opencensus.io/examples/exporter"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 	"net"
 	"os"
 	api "proglog/api/v1"
 	"proglog/internal/log"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.opencensus.io/examples/exporter"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 var debug = flag.Bool("debug", true, "Enable observability for debugging.")
@@ -38,9 +39,9 @@ func TestServer(t *testing.T) {
 		client api.LogClient,
 		config *Config,
 	){
-		//"produce/consume a message to/from the log succeeds": testProduceConsume,
-		"produce/consume stream succeeds": testProduceConsumeStream,
-		//"consume past log boundary fails":                    testConsumePastBoundary,
+		"produce/consume a message to/from the log succeeds": testProduceConsume,
+		"produce/consume stream succeeds":                    testProduceConsumeStream,
+		"consume past log boundary fails":                    testConsumePastBoundary,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			client, config, teardown := setupTest(t, nil)
@@ -116,16 +117,28 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		return
 	}
 	go func() {
-		server.Serve(l)
+		err := server.Serve(l)
+		if err != nil {
+			require.NoError(t, err)
+		}
 	}()
 
 	client = api.NewLogClient(cc)
 
 	return client, config, func() {
 		server.Stop()
-		cc.Close()
-		l.Close()
-		clog.Remove()
+		if err := cc.Close(); err != nil {
+			require.NoError(t, err)
+		}
+
+		if err := l.Close(); err != nil {
+			require.NoError(t, err)
+		}
+
+		if err := clog.Remove(); err != nil {
+			require.NoError(t, err)
+		}
+
 		if telemetryExporter != nil {
 			telemetryExporter.Stop()
 			telemetryExporter.Close()
@@ -158,7 +171,7 @@ func testProduceConsume(t *testing.T, client api.LogClient, config *Config) {
 		t.Errorf("Consume error %v", err)
 		return
 	}
-	if bytes.Compare(want.Value, consume.Record.Value) != 0 {
+	if !bytes.Equal(want.Value, consume.Record.Value) {
 		t.Errorf("expected %v, got %v", want.Value, consume.Record.Value)
 		return
 	}
@@ -267,7 +280,7 @@ func testProduceConsumeStream(
 				Value:  record.Value,
 				Offset: uint64(i),
 			}
-			if bytes.Compare(res.Record.Value, wantRecord.Value) != 0 {
+			if !bytes.Equal(res.Record.Value, wantRecord.Value) {
 				t.Errorf("want %v, got %v", wantRecord.Value, res.Record.Value)
 				return
 			}

@@ -1,7 +1,7 @@
 package log
 
 import (
-	"github.com/hashicorp/raft"
+	"io"
 	"os"
 	"path"
 	api "proglog/api/v1"
@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/hashicorp/raft"
 )
 
 type Record struct {
@@ -212,6 +214,14 @@ func (l *Log) Remove() error {
 	return os.RemoveAll(l.dir)
 }
 
+func (l *Log) Reset() error {
+	if err := l.Remove(); err != nil {
+		return err
+	}
+
+	return l.setup()
+}
+
 // Truncate removes all segments whose highest offset is lower than lowest.
 func (l *Log) Truncate(lowest uint64) error {
 	l.mu.Lock()
@@ -232,3 +242,32 @@ func (l *Log) Truncate(lowest uint64) error {
 
 	return nil
 }
+
+// START: Reader
+
+// Reader returns io.MultiReader to concatenate all segment's stores.
+func (l *Log) Reader() io.Reader {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	readers := make([]io.Reader, 0, len(l.segments))
+	for i, segment := range l.segments {
+		readers[i] = &originReader{segment.store, 0}
+	}
+
+	return io.MultiReader(readers...)
+}
+
+type originReader struct {
+	*store
+	offset int64
+}
+
+func (r *originReader) Read(p []byte) (int, error) {
+	at, err := r.store.ReadAt(p, r.offset)
+	r.offset += int64(at)
+
+	return at, err
+}
+
+// END: Reader

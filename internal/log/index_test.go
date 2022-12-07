@@ -24,8 +24,17 @@ func TestMain(m *testing.M) {
 
 func Test_index_Write_Read(t *testing.T) {
 	tempFile, err := os.CreateTemp(os.TempDir(), "index_text")
+	if err != nil {
+		t.Errorf("CreateTemp() error %v", err.Error())
+	}
+
 	config.MaxIndexBytes = 1024
-	defer os.Remove(tempFile.Name())
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			t.Errorf("Remove() error %v", err.Error())
+		}
+	}(tempFile.Name())
 
 	type args struct {
 		off      uint32
@@ -120,7 +129,13 @@ func Test_Simple_Read_Write(t *testing.T) {
 
 	// test build index
 	i, err := newIndex(tempFile, config)
-	defer i.Close()
+	defer func(i *index) {
+		err := i.Close()
+		if err != nil {
+			t.Errorf("Close() error = %v", err.Error())
+		}
+	}(i)
+
 	if err != nil {
 		t.Errorf("newIndex() error = %v", err.Error())
 	}
@@ -132,7 +147,7 @@ func Test_Simple_Read_Write(t *testing.T) {
 		t.Errorf("Write() error %v", err.Error())
 	}
 
-	out, pos, err := i.Read(int64(wantOff))
+	out, pos, _ := i.Read(int64(wantOff))
 	if out != wantOff {
 		t.Errorf("got %v want %v", out, wantOff)
 	}
