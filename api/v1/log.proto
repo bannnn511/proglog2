@@ -33,4 +33,6 @@ message ConsumeResponse {
 message Record {
   bytes Value = 1;
   uint64 Offset = 2;
+  uint64 Term = 3;
+  uint32 Type = 4;
 }

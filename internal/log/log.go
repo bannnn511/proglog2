@@ -18,7 +18,6 @@ type Record struct {
 	Offset uint64 `json:"offset"`
 }
 
-// Log TODO: implement multi-reader for log.
 type Log struct {
 	mu sync.RWMutex
 
@@ -30,33 +29,49 @@ type Log struct {
 }
 
 func (l *Log) FirstIndex() (uint64, error) {
-	//TODO implement me
-	panic("implement me")
+	return l.LowestOffset()
 }
 
 func (l *Log) LastIndex() (uint64, error) {
-	//TODO implement me
-	panic("implement me")
+	return l.HighestOffset()
 }
 
 func (l *Log) GetLog(index uint64, log *raft.Log) error {
-	//TODO implement me
-	panic("implement me")
+	read, err := l.Read(index)
+	if err != nil {
+		return err
+	}
+
+	log.Data = read.Value
+	log.Index = read.Offset
+	log.Term = read.Term
+	log.Type = raft.LogType(read.Type)
+
+	return nil
 }
 
 func (l *Log) StoreLog(log *raft.Log) error {
-	//TODO implement me
-	panic("implement me")
+	return l.StoreLogs([]*raft.Log{log})
 }
 
 func (l *Log) StoreLogs(logs []*raft.Log) error {
-	//TODO implement me
-	panic("implement me")
+	for _, log := range logs {
+		_, err := l.Append(&api.Record{
+			Value:  log.Data,
+			Offset: log.Index,
+			Term:   log.Term,
+			Type:   uint32(log.Type),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (l *Log) DeleteRange(min, max uint64) error {
-	//TODO implement me
-	panic("implement me")
+func (l *Log) DeleteRange(_, max uint64) error {
+	return l.Truncate(max)
 }
 
 // NewLog creates a Log instance and

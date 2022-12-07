@@ -209,28 +209,128 @@ func (d *DistributedLog) Read(offset uint64) (*api.Record, error) {
 	return d.Log.Read(offset)
 }
 
+// START: Service Discovery handler
+
+func (d *DistributedLog) Join(id, addr string) error {
+	configFuture := d.raft.GetConfiguration()
+	if err := configFuture.Error(); err != nil {
+		return err
+	}
+
+	serverID := raft.ServerID(id)
+	serverAddr := raft.ServerAddress(addr)
+
+	for _, server := range configFuture.Configuration().Servers {
+		if server.ID == serverID || server.Address == serverAddr {
+			if server.ID == serverID && server.Address == serverAddr {
+				return nil
+			}
+
+			d.raft.RemoveServer(serverID, 0, 0)
+		}
+		d.raft.AddVoter(serverID, serverAddr, 0, 0)
+	}
+
+	return nil
+}
+
+func (d *DistributedLog) Leave() error {
+	indexFuture := d.raft.RemoveServer(d.config.Raft.LocalID, 0, 0)
+	return indexFuture.Error()
+}
+
+func (d *DistributedLog) WaitForLeader(timeout time.Duration) error {
+	timeoutC := time.After(timeout)
+	ticker := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-timeoutC:
+			return nil
+		case <-ticker.C:
+			id, _ := d.raft.LeaderWithID()
+			if id == "" {
+				return nil
+			}
+		}
+	}
+}
+
+func (d *DistributedLog) Close() error {
+	return d.raft.Shutdown().Error()
+}
+
+// END: Service Discovery handler
+
+var _ raft.StreamLayer = (*StreamLayer)(nil)
+
 type StreamLayer struct {
 	ln              net.Listener
 	serverTLSConfig *tls.Config
 	peerTLSConfig   *tls.Config
 }
 
+func NewStreamLayer(ln net.Listener, serverTLSConfig, peerTLSConfig *tls.Config) *StreamLayer {
+	return &StreamLayer{
+		ln:              ln,
+		serverTLSConfig: serverTLSConfig,
+		peerTLSConfig:   peerTLSConfig,
+	}
+}
+
+const RaftRPC = 1
+
 func (s StreamLayer) Accept() (net.Conn, error) {
-	//TODO implement me
-	panic("implement me")
+	conn, err := s.ln.Accept()
+	if err != nil {
+		return nil, err
+	}
+
+	buffer := make([]byte, 1)
+	_, err = conn.Read(buffer)
+	if err != nil {
+		return nil, err
+	}
+
+	if !bytes.Equal(buffer, []byte{RaftRPC}) {
+		return nil, errors.New("not raft rpc")
+	}
+
+	if s.serverTLSConfig != nil {
+		conn = tls.Server(conn, s.serverTLSConfig)
+	}
+
+	return conn, nil
 }
 
 func (s StreamLayer) Close() error {
-	//TODO implement me
-	panic("implement me")
+	return s.ln.Close()
 }
 
 func (s StreamLayer) Addr() net.Addr {
-	//TODO implement me
-	panic("implement me")
+	return s.ln.Addr()
 }
 
+// Dial makes out-going connections to other severs.
+// When we connect, we will write RaftRPC byte to identify the connection type,
+// so that we can multiplex Raft on the same port as our Log gRPC request.
 func (s StreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
-	//TODO implement me
-	panic("implement me")
+	dialer := net.Dialer{
+		Timeout: timeout,
+	}
+
+	var conn, err = dialer.Dial("tcp", string(address))
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = conn.Write([]byte{RaftRPC})
+	if err != nil {
+		return nil, err
+	}
+
+	if s.peerTLSConfig != nil {
+		conn = tls.Client(conn, s.peerTLSConfig)
+	}
+
+	return conn, nil
 }

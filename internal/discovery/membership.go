@@ -1,9 +1,12 @@
 package discovery
 
 import (
+	"net"
+
+	"github.com/hashicorp/raft"
+
 	"github.com/hashicorp/serf/serf"
 	"go.uber.org/zap"
-	"net"
 )
 
 type Membership struct {
@@ -139,7 +142,12 @@ func (m *Membership) handleLeave(mem *serf.Member) {
 }
 
 func (m *Membership) logError(err error, msg string, member serf.Member) {
-	m.logger.Error(
+	logger := m.logger.Error
+	if err != raft.ErrNotLeader {
+		logger = m.logger.Debug
+	}
+
+	logger(
 		msg,
 		zap.Error(err),
 		zap.String("name", member.Name),
