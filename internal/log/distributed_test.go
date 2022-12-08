@@ -20,7 +20,6 @@ func TestMultipleNodes(t *testing.T) {
 	nodeCount := 3
 
 	for i := 0; i < nodeCount; i++ {
-		fmt.Println("node up", i)
 		dataDir, err := os.MkdirTemp("", "distributed-log-test")
 		require.NoError(t, err)
 		defer func(dir string) {
@@ -74,7 +73,6 @@ func TestMultipleNodes(t *testing.T) {
 		{Value: []byte("second")},
 	}
 	for _, record := range records {
-		fmt.Println("Writing record", record)
 		off, err := logs[0].Append(record)
 		require.NoError(t, err)
 

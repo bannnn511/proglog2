@@ -70,7 +70,9 @@ func (d *DistributedLog) setupLog(dataDir string) error {
 
 func (d *DistributedLog) setupRaft(dataDir string) error {
 	// FSN that applies the command given to Raft.
-	fsm := &fsm{}
+	fsm := &fsm{
+		log: d.Log,
+	}
 
 	// START: log store where Raft will store commands.
 	logDirectory := filepath.Join(dataDir, "raft", "logs")
@@ -177,7 +179,7 @@ const (
 )
 
 func (d *DistributedLog) Append(record *api.Record) (uint64, error) {
-	response, err := d.apply(AppendRequestType, record)
+	response, err := d.apply(AppendRequestType, &api.ProduceRequest{Record: record})
 	if err != nil {
 		return 0, err
 	}
@@ -193,16 +195,25 @@ func (d *DistributedLog) Append(record *api.Record) (uint64, error) {
 // apply wraps Raft's api to apply request and return response.
 func (d *DistributedLog) apply(requestType RequestType, message proto.Message) (interface{}, error) {
 	var buf bytes.Buffer
-	buf.Write([]byte{byte(requestType)})
+	_, err := buf.Write([]byte{byte(requestType)})
+	if err != nil {
+		return nil, err
+	}
+
 	marshal, err := proto.Marshal(message)
 	if err != nil {
 		return nil, err
 	}
-	buf.Write(marshal)
+
+	_, err = buf.Write(marshal)
+	if err != nil {
+		return nil, err
+	}
 
 	timeout := 10 * time.Second
 	applyFuture := d.raft.Apply(buf.Bytes(), timeout)
-	if applyFuture.Error() != nil {
+	if err := applyFuture.Error(); err != nil {
+		d.error("failed to apply request", "err", err)
 		return nil, err
 	}
 
@@ -255,7 +266,7 @@ func (d *DistributedLog) WaitForLeader(timeout time.Duration) error {
 		return err
 	case <-ticker.C:
 		addr, id := d.raft.LeaderWithID()
-		d.slog("leader is %s at %s", "id", id, "addr", addr)
+		d.slog("leader at", "id", id, "addr", addr)
 		if id == "" {
 			return nil
 		}
