@@ -2,21 +2,22 @@ package agent
 
 import (
 	"fmt"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"net"
 	v1 "proglog/api/v1"
 	"proglog/internal/discovery"
 	"proglog/internal/log"
 	"proglog/internal/server"
 	"sync"
+
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Agent struct {
 	Config
 	replicator   *log.Replicator
-	Log          *log.Log
+	Log          *log.DistributedLog
 	Server       *grpc.Server
 	Membership   *discovery.Membership
 	shutdownLock sync.Mutex
@@ -73,7 +74,7 @@ func (a *Agent) setupLogger() error {
 }
 
 func (a *Agent) setupLog() error {
-	logStore, err := log.NewLog(a.DataDir, log.Config{})
+	logStore, err := log.NewDistributedLog(a.DataDir, log.Config{})
 	if err != nil {
 		return err
 	}
@@ -85,7 +86,8 @@ func (a *Agent) setupLog() error {
 
 func (a *Agent) setupServer() error {
 	config := &server.Config{
-		CommitLog: a.Log,
+		CommitLog:  a.Log,
+		GetServers: a.Log,
 	}
 
 	serverPort, err := a.RPCAddr()

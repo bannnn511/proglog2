@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	api "proglog/api/v1"
+	log2 "proglog/internal/log"
 	"time"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -18,7 +19,12 @@ import (
 )
 
 type Config struct {
-	CommitLog CommitLog
+	CommitLog  *log2.DistributedLog
+	GetServers GetServers
+}
+
+type GetServers interface {
+	GetServers() ([]*api.Server, error)
 }
 
 type CommitLog interface {
@@ -153,4 +159,8 @@ func (s *grpcServer) ConsumeStream(
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
+}
+
+func (s *grpcServer) GetServers(_ context.Context, req *api.GetServersRequest) (*api.GetServersResponse, error) {
+	return nil, nil
 }
