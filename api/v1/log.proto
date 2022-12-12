@@ -9,6 +9,7 @@ service log {
   rpc Consume(ConsumeRequest) returns (ConsumeResponse);
   rpc ProduceStream(stream ProduceRequest) returns (stream ProduceResponse);
   rpc ConsumeStream(ConsumeRequest) returns (stream ConsumeResponse);
+  rpc GetServers(GetServersRequest) returns (GetServersResponse);
 }
 // END: service
 
@@ -28,6 +29,12 @@ message ConsumeRequest {
 message ConsumeResponse {
   Record record = 1;
 }
+
+message GetServersRequest {}
+
+message GetServersResponse {
+  repeated string servers = 1;
+}
 // END: apis
 
 message Record {
@@ -35,4 +42,11 @@ message Record {
   uint64 Offset = 2;
   uint64 Term = 3;
   uint32 Type = 4;
+}
+
+
+message Server {
+  string Id = 1;
+  string rpc_addr = 2;
+  bool is_leader = 3;
 }
