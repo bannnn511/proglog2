@@ -172,6 +172,26 @@ func (d *DistributedLog) setupRaft(dataDir string) error {
 	return err
 }
 
+// GetServers returns a list of raft's servers.
+func (d *DistributedLog) GetServers() ([]*api.Server, error) {
+	raftConfigurations := d.raft.GetConfiguration()
+	if err := raftConfigurations.Error(); err != nil {
+		return nil, err
+	}
+
+	var servers []*api.Server
+	for _, server := range raftConfigurations.Configuration().Servers {
+		leaderAddress, leaderId := d.raft.LeaderWithID()
+		servers = append(servers, &api.Server{
+			Id:       string(server.ID),
+			RpcAddr:  string(server.Address),
+			IsLeader: server.ID == leaderId && server.Address == leaderAddress,
+		})
+	}
+
+	return servers, nil
+}
+
 type RequestType uint8
 
 const (
