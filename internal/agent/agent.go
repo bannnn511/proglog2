@@ -3,20 +3,20 @@ package agent
 import (
 	"fmt"
 	"net"
-	v1 "proglog/api/v1"
 	"proglog/internal/discovery"
 	"proglog/internal/log"
 	"proglog/internal/server"
 	"sync"
 
+	"github.com/soheilhy/cmux"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Agent struct {
 	Config
-	replicator   *log.Replicator
+
+	mux          cmux.CMux
 	Log          *log.DistributedLog
 	Server       *grpc.Server
 	Membership   *discovery.Membership
@@ -30,6 +30,7 @@ type Config struct {
 	BindAddr           string
 	RpcPort            int
 	StartJoinAddresses []string
+	Boostrap           bool
 }
 
 func New(config Config) (*Agent, error) {
@@ -50,6 +51,12 @@ func New(config Config) (*Agent, error) {
 			return nil, err
 		}
 	}
+	go func() {
+		err := agent.serve()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	return agent, nil
 }
@@ -65,9 +72,6 @@ func (c Config) RPCAddr() (string, error) {
 // setupLogger setups zap logger.
 func (a *Agent) setupLogger() error {
 	logger := zap.L()
-	//if err != nil {
-	//	return err
-	//}
 	zap.ReplaceGlobals(logger.Named("Agent"))
 
 	return nil
@@ -116,6 +120,17 @@ func (a *Agent) setupServer() error {
 	return nil
 }
 
+func (a *Agent) setupMux() error {
+	rpcAddr := fmt.Sprintf(":%d", a.RpcPort)
+	listen, err := net.Listen("tcp", string(rpcAddr))
+	if err != nil {
+		return err
+	}
+	a.mux = cmux.New(listen)
+
+	return nil
+}
+
 func (a *Agent) setupMembership() error {
 	rpcAddr, err := a.Config.RPCAddr()
 	if err != nil {
@@ -131,36 +146,25 @@ func (a *Agent) setupMembership() error {
 		},
 	}
 
-	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	target, err := a.RPCAddr()
-	if err != nil {
-		return err
-	}
-
-	cc, err := grpc.Dial(target, clientOptions...)
-	if err != nil {
-		return err
-	}
-
-	localServer := v1.NewLogClient(cc)
-	if err != nil {
-		return err
-	}
-
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	a.replicator = &log.Replicator{
-		NodeName:    a.NodeName,
-		LocalServer: localServer,
-		DialOptions: opts,
-	}
 	membership, err := discovery.New(
-		a.replicator,
+		a.Log,
 		config,
 	)
+
 	if err != nil {
 		return err
 	}
 	a.Membership = membership
+
+	return nil
+}
+
+func (a *Agent) serve() error {
+	if err := a.mux.Serve(); err != nil {
+		_ = a.shutdown()
+
+		return err
+	}
 
 	return nil
 }
@@ -176,7 +180,6 @@ func (a *Agent) shutdown() error {
 
 	shutdownFunctions := []func() error{
 		a.Membership.Leave,
-		a.replicator.Close,
 		func() error {
 			a.Server.GracefulStop()
 			return nil
