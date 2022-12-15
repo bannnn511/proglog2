@@ -379,7 +379,7 @@ func (s StreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (ne
 		return nil, err
 	}
 
-	_, err = conn.Write([]byte{RaftRPC})
+	_, err = conn.Write([]byte{byte(RaftRPC)})
 	if err != nil {
 		return nil, err
 	}

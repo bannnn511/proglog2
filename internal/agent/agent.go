@@ -1,12 +1,20 @@
 package agent
 
 import (
+	"bytes"
+	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
 	"proglog/internal/discovery"
 	"proglog/internal/log"
 	"proglog/internal/server"
 	"sync"
+	"time"
+
+	"google.golang.org/grpc/credentials"
+
+	"github.com/hashicorp/raft"
 
 	"github.com/soheilhy/cmux"
 	"go.uber.org/zap"
@@ -25,6 +33,8 @@ type Agent struct {
 }
 
 type Config struct {
+	ServerTLSConfig    *tls.Config
+	PeerTLSConfig      *tls.Config
 	DataDir            string
 	NodeName           string
 	BindAddr           string
@@ -40,6 +50,7 @@ func New(config Config) (*Agent, error) {
 
 	setups := []func() error{
 		agent.setupLogger,
+		agent.setupMux,
 		agent.setupLog,
 		agent.setupServer,
 		agent.setupMembership,
@@ -78,12 +89,30 @@ func (a *Agent) setupLogger() error {
 }
 
 func (a *Agent) setupLog() error {
-	logStore, err := log.NewDistributedLog(a.DataDir, log.Config{})
+	raftLn := a.mux.Match(func(reader io.Reader) bool {
+		b := make([]byte, 1)
+		_, err := reader.Read(b)
+		if err != nil {
+			return false
+		}
+
+		return !bytes.Equal(b, []byte{byte(log.RaftRPC)})
+	})
+
+	raftConfig := log.Config{}
+	raftConfig.Raft.StreamLayer = log.NewStreamLayer(raftLn, a.ServerTLSConfig, a.PeerTLSConfig)
+	raftConfig.Raft.LocalID = raft.ServerID(a.NodeName)
+	raftConfig.Raft.Bootstrap = a.Boostrap
+
+	var err error
+	a.Log, err = log.NewDistributedLog(a.DataDir, raftConfig)
 	if err != nil {
 		return err
 	}
 
-	a.Log = logStore
+	if a.Boostrap {
+		return a.Log.WaitForLeader(3 * time.Second)
+	}
 
 	return nil
 }
@@ -94,30 +123,27 @@ func (a *Agent) setupServer() error {
 		GetServers: a.Log,
 	}
 
-	serverPort, err := a.RPCAddr()
+	var opts []grpc.ServerOption
+	if a.ServerTLSConfig != nil {
+		cred := credentials.NewTLS(a.ServerTLSConfig)
+		opts = append(opts, grpc.Creds(cred))
+	}
+
+	var err error
+	a.Server, err = server.NewGrpcServer(config, opts...)
 	if err != nil {
 		return err
 	}
 
-	l, err := net.Listen("tcp", serverPort)
-	if err != nil {
-		return err
-	}
-
-	grpcServer, err := server.NewGrpcServer(config)
-	if err != nil {
-		return err
-	}
-
+	grpcLn := a.mux.Match(cmux.Any())
 	go func() {
-		err := grpcServer.Serve(l)
+		err := a.Server.Serve(grpcLn)
 		if err != nil {
 			_ = a.shutdown()
 		}
 	}()
-	a.Server = grpcServer
 
-	return nil
+	return err
 }
 
 func (a *Agent) setupMux() error {

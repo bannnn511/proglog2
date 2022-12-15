@@ -21,7 +21,7 @@ func TestAgent(t *testing.T) {
 
 	// START: Setup Agent
 	for i := 0; i < 2; i++ {
-		dataDir, err := os.MkdirTemp("/Users/bannnnn./Documents/test-log", fmt.Sprintf("agent-#%v-", i))
+		dataDir, err := os.MkdirTemp("", fmt.Sprintf("agent-#%v-", i))
 		require.NoError(t, err, "error create temp dir for agent")
 
 		port, err := util.GetFreePort()
