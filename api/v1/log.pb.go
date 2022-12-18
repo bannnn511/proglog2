@@ -252,7 +252,7 @@ type GetServersResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Servers []string `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty"`
+	Servers []*Server `protobuf:"bytes,1,rep,name=servers,proto3" json:"servers,omitempty"`
 }
 
 func (x *GetServersResponse) Reset() {
@@ -287,7 +287,7 @@ func (*GetServersResponse) Descriptor() ([]byte, []int) {
 	return file_api_v1_log_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *GetServersResponse) GetServers() []string {
+func (x *GetServersResponse) GetServers() []*Server {
 	if x != nil {
 		return x.Servers
 	}
@@ -446,9 +446,10 @@ var file_api_v1_log_proto_rawDesc = []byte{
 	0x72, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x6c,
 	0x6f, 0x67, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x63, 0x6f, 0x72, 0x64, 0x52, 0x06, 0x72, 0x65,
 	0x63, 0x6f, 0x72, 0x64, 0x22, 0x13, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x65,
-	0x72, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x2e, 0x0a, 0x12, 0x47, 0x65, 0x74,
+	0x72, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x3e, 0x0a, 0x12, 0x47, 0x65, 0x74,
 	0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x18, 0x0a, 0x07, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09,
+	0x28, 0x0a, 0x07, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x0e, 0x2e, 0x6c, 0x6f, 0x67, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72,
 	0x52, 0x07, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x73, 0x22, 0x5e, 0x0a, 0x06, 0x52, 0x65, 0x63,
 	0x6f, 0x72, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x0c, 0x52, 0x05, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x4f, 0x66, 0x66,
@@ -511,21 +512,22 @@ var file_api_v1_log_proto_goTypes = []interface{}{
 var file_api_v1_log_proto_depIdxs = []int32{
 	6, // 0: log.v1.ProduceRequest.record:type_name -> log.v1.Record
 	6, // 1: log.v1.ConsumeResponse.record:type_name -> log.v1.Record
-	0, // 2: log.v1.log.Produce:input_type -> log.v1.ProduceRequest
-	2, // 3: log.v1.log.Consume:input_type -> log.v1.ConsumeRequest
-	0, // 4: log.v1.log.ProduceStream:input_type -> log.v1.ProduceRequest
-	2, // 5: log.v1.log.ConsumeStream:input_type -> log.v1.ConsumeRequest
-	4, // 6: log.v1.log.GetServers:input_type -> log.v1.GetServersRequest
-	1, // 7: log.v1.log.Produce:output_type -> log.v1.ProduceResponse
-	3, // 8: log.v1.log.Consume:output_type -> log.v1.ConsumeResponse
-	1, // 9: log.v1.log.ProduceStream:output_type -> log.v1.ProduceResponse
-	3, // 10: log.v1.log.ConsumeStream:output_type -> log.v1.ConsumeResponse
-	5, // 11: log.v1.log.GetServers:output_type -> log.v1.GetServersResponse
-	7, // [7:12] is the sub-list for method output_type
-	2, // [2:7] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	7, // 2: log.v1.GetServersResponse.servers:type_name -> log.v1.Server
+	0, // 3: log.v1.log.Produce:input_type -> log.v1.ProduceRequest
+	2, // 4: log.v1.log.Consume:input_type -> log.v1.ConsumeRequest
+	0, // 5: log.v1.log.ProduceStream:input_type -> log.v1.ProduceRequest
+	2, // 6: log.v1.log.ConsumeStream:input_type -> log.v1.ConsumeRequest
+	4, // 7: log.v1.log.GetServers:input_type -> log.v1.GetServersRequest
+	1, // 8: log.v1.log.Produce:output_type -> log.v1.ProduceResponse
+	3, // 9: log.v1.log.Consume:output_type -> log.v1.ConsumeResponse
+	1, // 10: log.v1.log.ProduceStream:output_type -> log.v1.ProduceResponse
+	3, // 11: log.v1.log.ConsumeStream:output_type -> log.v1.ConsumeResponse
+	5, // 12: log.v1.log.GetServers:output_type -> log.v1.GetServersResponse
+	8, // [8:13] is the sub-list for method output_type
+	3, // [3:8] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_log_proto_init() }
