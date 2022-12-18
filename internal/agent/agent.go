@@ -24,20 +24,25 @@ import (
 type Agent struct {
 	Config
 
-	mux          cmux.CMux
-	Log          *log.DistributedLog
-	Server       *grpc.Server
-	Membership   *discovery.Membership
+	mux        cmux.CMux
+	Log        *log.DistributedLog
+	Server     *grpc.Server
+	Membership *discovery.Membership
+
 	shutdownLock sync.Mutex
 	isShutdown   bool
 }
 
 type Config struct {
-	ServerTLSConfig    *tls.Config
-	PeerTLSConfig      *tls.Config
-	DataDir            string
-	NodeName           string
-	BindAddr           string
+	ServerTLSConfig *tls.Config
+	PeerTLSConfig   *tls.Config
+	// DataDir stores the log and raft fata.
+	DataDir string
+	// Raft server id.
+	NodeName string
+	// BindAddr is the address that serf run on.
+	BindAddr string
+	// Port for client and raft connections.
 	RpcPort            int
 	StartJoinAddresses []string
 	Boostrap           bool
@@ -91,12 +96,11 @@ func (a *Agent) setupLogger() error {
 func (a *Agent) setupLog() error {
 	raftLn := a.mux.Match(func(reader io.Reader) bool {
 		b := make([]byte, 1)
-		_, err := reader.Read(b)
-		if err != nil {
+		if _, err := reader.Read(b); err != nil {
 			return false
 		}
 
-		return !bytes.Equal(b, []byte{byte(log.RaftRPC)})
+		return bytes.Equal(b, []byte{byte(log.RaftRPC)})
 	})
 
 	raftConfig := log.Config{}
@@ -148,7 +152,7 @@ func (a *Agent) setupServer() error {
 
 func (a *Agent) setupMux() error {
 	rpcAddr := fmt.Sprintf(":%d", a.RpcPort)
-	listen, err := net.Listen("tcp", string(rpcAddr))
+	listen, err := net.Listen("tcp", rpcAddr)
 	if err != nil {
 		return err
 	}
