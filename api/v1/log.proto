@@ -33,7 +33,7 @@ message ConsumeResponse {
 message GetServersRequest {}
 
 message GetServersResponse {
-  repeated string servers = 1;
+  repeated Server servers = 1;
 }
 // END: apis
 
