@@ -18,8 +18,6 @@ gencert:
 					 -config=./config/certs/ca-config.json\
 					  -profile=server \
 					  ./config/certs/server-csr.json | cfssljson -bare server
-
-	mv *.csr *.pem ./config/certs/
 	# END: initca
 
 	# START: client
@@ -31,7 +29,6 @@ gencert:
 					  -profile=client \
 					  ./config/certs/client-csr.json | cfssljson -bare root-client
 
-	mv *.csr *.pem ./config/certs/
 	# END: client
 
 	# START: multi client

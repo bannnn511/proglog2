@@ -19,11 +19,11 @@ import (
 )
 
 type Config struct {
-	CommitLog  *log2.DistributedLog
-	GetServers GetServers
+	CommitLog   *log2.DistributedLog
+	GetServerer GetServerer
 }
 
-type GetServers interface {
+type GetServerer interface {
 	GetServers() ([]*api.Server, error)
 }
 

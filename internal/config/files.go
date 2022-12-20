@@ -25,9 +25,9 @@ func configFile(filename string) string {
 	if dir := os.Getenv("CONFIG_DIR"); dir != "" {
 		return filepath.Join(dir, filename)
 	}
-	homeDir, err := os.UserHomeDir()
+	homeDir, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
-	return filepath.Join(homeDir, ".proglog/secrets", filename)
+	return filepath.Join(homeDir, "../../config/certs/", filename)
 }

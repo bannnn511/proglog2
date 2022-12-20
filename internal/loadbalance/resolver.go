@@ -27,9 +27,11 @@ type Resolver struct {
 }
 
 // START: resolver.Builder
+var _ resolver.Builder = (*Resolver)(nil)
 
 // Build builds the resolver.
 func (r *Resolver) Build(target resolver.Target, conn resolver.ClientConn, buildOpts resolver.BuildOptions) (resolver.Resolver, error) {
+	r.logger = zap.NewExample().Named("resolver")
 	r.clientConn = conn
 	var opts []grpc.DialOption
 	if buildOpts.DialCreds != nil {
@@ -57,6 +59,7 @@ func (r *Resolver) Scheme() string {
 // END: resolver.Builder
 
 // START: resolver.Resolver
+var _ resolver.Resolver = (*Resolver)(nil)
 
 // ResolveNow will be called by grpc to resolve the target, discover the servers and update the client connection
 // with the servers.
@@ -68,6 +71,7 @@ func (r *Resolver) ResolveNow(resolver.ResolveNowOptions) {
 	res, err := logClient.GetServers(context.Background(), &api.GetServersRequest{})
 	if err != nil {
 		r.logger.Error("failed to resolve server", zap.Error(err))
+		return
 	}
 
 	var addresses []resolver.Address

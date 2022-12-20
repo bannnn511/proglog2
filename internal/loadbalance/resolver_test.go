@@ -2,7 +2,6 @@ package loadbalance
 
 import (
 	"net"
-	"net/url"
 	api "proglog/api/v1"
 	"proglog/internal/config"
 	"proglog/internal/server"
@@ -31,7 +30,7 @@ func TestResolver(t *testing.T) {
 	serverCreds := credentials.NewTLS(tlsConfig)
 
 	srv, err := server.NewGrpcServer(&server.Config{
-		GetServerer: &getServers{}, //<label id="get_servers_mock"/>
+		GetServerer: &getServers{},
 	}, grpc.Creds(serverCreds))
 	require.NoError(t, err)
 
@@ -60,11 +59,11 @@ func TestResolver(t *testing.T) {
 		DialCreds: clientCreds,
 	}
 	r := &Resolver{}
+	//targetUrl, err := url.Parse(l.Addr().String())
+	require.NoError(t, err)
 	_, err = r.Build(
 		resolver.Target{
-			URL: url.URL{
-				Path: l.Addr().String(),
-			},
+			Endpoint: l.Addr().String(),
 		},
 		conn,
 		opts,
