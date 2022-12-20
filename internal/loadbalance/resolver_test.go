@@ -2,6 +2,7 @@ package loadbalance
 
 import (
 	"net"
+	"net/url"
 	api "proglog/api/v1"
 	"proglog/internal/config"
 	"proglog/internal/server"
@@ -59,11 +60,11 @@ func TestResolver(t *testing.T) {
 		DialCreds: clientCreds,
 	}
 	r := &Resolver{}
-	//targetUrl, err := url.Parse(l.Addr().String())
+	targetUrl, err := url.Parse("http://" + l.Addr().String())
 	require.NoError(t, err)
 	_, err = r.Build(
 		resolver.Target{
-			Endpoint: l.Addr().String(),
+			URL: *targetUrl,
 		},
 		conn,
 		opts,
