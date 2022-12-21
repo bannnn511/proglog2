@@ -76,13 +76,15 @@ func TestResolver(t *testing.T) {
 	wantState := resolver.State{
 		Addresses: []resolver.Address{{
 			Addr:       "localhost:9001",
+			ServerName: "leader",
 			Attributes: attributes.New("is_leader", true),
 		}, {
 			Addr:       "localhost:9002",
+			ServerName: "follower",
 			Attributes: attributes.New("is_leader", false),
 		}},
 	}
-	require.Equal(t, wantState, conn.state)
+	require.Equal(t, wantState.Addresses, conn.state.Addresses)
 
 	conn.state.Addresses = nil
 	r.ResolveNow(resolver.ResolveNowOptions{})
@@ -116,15 +118,13 @@ func (c *clientConn) UpdateState(state resolver.State) error {
 	return nil
 }
 
-func (c *clientConn) ReportError(err error) {}
+func (c *clientConn) ReportError(error) {}
 
-func (c *clientConn) NewAddress(addrs []resolver.Address) {}
+func (c *clientConn) NewAddress([]resolver.Address) {}
 
-func (c *clientConn) NewServiceConfig(config string) {}
+func (c *clientConn) NewServiceConfig(string) {}
 
-func (c *clientConn) ParseServiceConfig(
-	config string,
-) *serviceconfig.ParseResult {
+func (c *clientConn) ParseServiceConfig(string) *serviceconfig.ParseResult {
 	return nil
 }
 

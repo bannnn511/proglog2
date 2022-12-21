@@ -9,20 +9,19 @@ compile-protoc:
 test:
 	go test --race ./...
 
+.PHONY: gencert
 gencert:
-	# START: initca
-	cfssl genkey -initca ./config/certs/ca-csr.json | cfssljson -bare ca
+	# START: init ca
+	cfssl gencert -initca ./config/certs/ca-csr.json | cfssljson -bare ca
 
 	cfssl gencert -ca=ca.pem \
 					-ca-key=ca-key.pem\
 					 -config=./config/certs/ca-config.json\
 					  -profile=server \
 					  ./config/certs/server-csr.json | cfssljson -bare server
-	# END: initca
+	# END: init ca
 
 	# START: client
-	cfssl genkey -initca ./config/certs/ca-csr.json | cfssljson -bare ca
-
 	cfssl gencert -ca=ca.pem \
 					-ca-key=ca-key.pem\
 					 -config=./config/certs/ca-config.json\
@@ -32,8 +31,6 @@ gencert:
 	# END: client
 
 	# START: multi client
-	cfssl genkey -initca ./config/certs/ca-csr.json | cfssljson -bare ca
-
 	cfssl gencert -ca=ca.pem \
 					-ca-key=ca-key.pem\
 					 -config=./config/certs/ca-config.json\
@@ -44,3 +41,6 @@ gencert:
 	# START: begin
 	mv *.csr *.pem ./config/certs/
 	# END: begin
+
+clean-cert:
+	rm -rf ./config/certs/*.csr ./config/certs/*.pem

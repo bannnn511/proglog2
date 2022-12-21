@@ -6,10 +6,12 @@ import (
 )
 
 var (
+	// START: begin
 	CAFile         = configFile("ca.pem")
 	ServerCertFile = configFile("server.pem")
 	ServerKeyFile  = configFile("server-key.pem")
 	// END: begin
+
 	// START: authorize
 	RootClientCertFile   = configFile("root-client.pem")
 	RootClientKeyFile    = configFile("root-client-key.pem")
@@ -18,7 +20,6 @@ var (
 	ACLModelFile         = configFile("model.conf")
 	ACLPolicyFile        = configFile("policy.csv")
 	// END: authorize
-	// START: begin
 )
 
 func configFile(filename string) string {

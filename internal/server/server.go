@@ -162,5 +162,9 @@ func (s *grpcServer) ConsumeStream(
 }
 
 func (s *grpcServer) GetServers(_ context.Context, req *api.GetServersRequest) (*api.GetServersResponse, error) {
-	return nil, nil
+	severs, err := s.GetServerer.GetServers()
+	if err != nil {
+		return nil, err
+	}
+	return &api.GetServersResponse{Servers: severs}, nil
 }
