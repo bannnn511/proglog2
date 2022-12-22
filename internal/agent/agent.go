@@ -123,8 +123,8 @@ func (a *Agent) setupLog() error {
 
 func (a *Agent) setupServer() error {
 	config := &server.Config{
-		CommitLog:  a.Log,
-		GetServers: a.Log,
+		CommitLog:   a.Log,
+		GetServerer: a.Log,
 	}
 
 	var opts []grpc.ServerOption
@@ -143,7 +143,7 @@ func (a *Agent) setupServer() error {
 	go func() {
 		err := a.Server.Serve(grpcLn)
 		if err != nil {
-			_ = a.shutdown()
+			_ = a.Shutdown()
 		}
 	}()
 
@@ -191,7 +191,7 @@ func (a *Agent) setupMembership() error {
 
 func (a *Agent) serve() error {
 	if err := a.mux.Serve(); err != nil {
-		_ = a.shutdown()
+		_ = a.Shutdown()
 
 		return err
 	}
@@ -199,7 +199,7 @@ func (a *Agent) serve() error {
 	return nil
 }
 
-func (a *Agent) shutdown() error {
+func (a *Agent) Shutdown() error {
 	a.shutdownLock.Lock()
 	defer a.shutdownLock.Unlock()
 

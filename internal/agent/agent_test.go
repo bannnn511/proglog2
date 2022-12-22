@@ -1,10 +1,11 @@
-package agent
+package agent_test
 
 import (
 	"context"
 	"fmt"
 	"os"
 	api "proglog/api/v1"
+	"proglog/internal/agent"
 	"proglog/util"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 func TestAgent(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	logger.Sugar()
-	var agents []*Agent
+	var agents []*agent.Agent
 
 	// START: Setup Agent
 	for i := 0; i < 2; i++ {
@@ -36,7 +37,7 @@ func TestAgent(t *testing.T) {
 			startJoinAddresses = append(startJoinAddresses, agents[0].BindAddr)
 		}
 
-		config := Config{
+		config := agent.Config{
 			DataDir:            dataDir,
 			NodeName:           fmt.Sprintf("Node No.%v", i),
 			BindAddr:           addr,
@@ -49,7 +50,7 @@ func TestAgent(t *testing.T) {
 			zap.Int("rpc port", rpcPort),
 		)
 
-		agent, err := New(config)
+		agent, err := agent.New(config)
 		require.NoError(t, err, "create agent error")
 		agents = append(agents, agent)
 	}
@@ -58,7 +59,7 @@ func TestAgent(t *testing.T) {
 	// START: Handle shutting down agents
 	defer func() {
 		for _, agent := range agents {
-			err := agent.shutdown()
+			err := agent.Shutdown()
 			require.NoError(t, err, "agent shutdown error")
 			require.NoError(t, os.RemoveAll(agent.DataDir))
 		}
@@ -105,7 +106,7 @@ func TestAgent(t *testing.T) {
 	require.Equal(t, string(response.Record.Value), message)
 }
 
-func client(agent *Agent) (api.LogClient, error) {
+func client(agent *agent.Agent) (api.LogClient, error) {
 	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	target, err := agent.RPCAddr()
 	if err != nil {

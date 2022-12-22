@@ -1,10 +1,11 @@
-package loadbalance
+package loadbalance_test
 
 import (
 	"net"
 	"net/url"
 	api "proglog/api/v1"
 	"proglog/internal/config"
+	"proglog/internal/loadbalance"
 	"proglog/internal/server"
 	"testing"
 
@@ -59,7 +60,7 @@ func TestResolver(t *testing.T) {
 	opts := resolver.BuildOptions{
 		DialCreds: clientCreds,
 	}
-	r := &Resolver{}
+	r := &loadbalance.Resolver{}
 	targetUrl, err := url.Parse("http://" + l.Addr().String())
 	require.NoError(t, err)
 	_, err = r.Build(
