@@ -44,6 +44,7 @@ func (r *Resolver) Build(target resolver.Target, conn resolver.ClientConn, build
 	var err error
 	r.resolverConn, err = grpc.Dial(target.URL.Host, opts...)
 	if err != nil {
+		fmt.Println("here her")
 		return nil, err
 	}
 
@@ -54,6 +55,10 @@ func (r *Resolver) Build(target resolver.Target, conn resolver.ClientConn, build
 
 func (r *Resolver) Scheme() string {
 	return Name
+}
+
+func init() {
+	resolver.Register(&Resolver{})
 }
 
 // END: resolver.Builder

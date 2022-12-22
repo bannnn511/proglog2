@@ -2,20 +2,43 @@ package agent_test
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"os"
 	api "proglog/api/v1"
 	"proglog/internal/agent"
+	"proglog/internal/config"
+	"proglog/internal/loadbalance"
 	"proglog/util"
 	"testing"
+	"time"
+
+	"google.golang.org/grpc/credentials"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestAgent(t *testing.T) {
+	serverTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
+		CertFile:      config.ServerCertFile,
+		KeyFile:       config.ServerKeyFile,
+		CAFile:        config.CAFile,
+		Server:        true,
+		ServerAddress: "127.0.0.1",
+	})
+	require.NoError(t, err)
+
+	peerTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
+		CertFile:      config.RootClientCertFile,
+		KeyFile:       config.RootClientKeyFile,
+		CAFile:        config.CAFile,
+		Server:        false,
+		ServerAddress: "127.0.0.1",
+	})
+	require.NoError(t, err)
+
 	logger, _ := zap.NewDevelopment()
 	logger.Sugar()
 	var agents []*agent.Agent
@@ -39,16 +62,14 @@ func TestAgent(t *testing.T) {
 
 		config := agent.Config{
 			DataDir:            dataDir,
+			Boostrap:           i == 0,
 			NodeName:           fmt.Sprintf("Node No.%v", i),
 			BindAddr:           addr,
 			RpcPort:            rpcPort,
 			StartJoinAddresses: startJoinAddresses,
+			PeerTLSConfig:      peerTLSConfig,
+			ServerTLSConfig:    serverTLSConfig,
 		}
-		logger.Info("AGENT INFO-----",
-			zap.String("node name", config.NodeName),
-			zap.String("bind addr", config.BindAddr),
-			zap.Int("rpc port", rpcPort),
-		)
 
 		agent, err := agent.New(config)
 		require.NoError(t, err, "create agent error")
@@ -66,9 +87,9 @@ func TestAgent(t *testing.T) {
 	}()
 	// END: Handle shutting down agents
 
-	//time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 	// START: Leader log client
-	leaderClient, err := client(agents[0])
+	leaderClient, err := client(agents[0], peerTLSConfig)
 	require.NoError(t, err, "error create leader client")
 
 	message := "hello"
@@ -91,11 +112,11 @@ func TestAgent(t *testing.T) {
 	// END: Leader log client
 
 	// START: Test consumer
-	consumerClient, err := client(agents[1])
+	consumerClient, err := client(agents[1], peerTLSConfig)
 	require.NoError(t, err, "error create client 1")
 
 	//wait for replication
-	//time.Sleep(3 * time.Second)
+	time.Sleep(3 * time.Second)
 	response, err := consumerClient.Consume(
 		context.Background(),
 		&api.ConsumeRequest{
@@ -106,14 +127,17 @@ func TestAgent(t *testing.T) {
 	require.Equal(t, string(response.Record.Value), message)
 }
 
-func client(agent *agent.Agent) (api.LogClient, error) {
-	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+func client(agent *agent.Agent, tlsConfig *tls.Config) (api.LogClient, error) {
+	tlsCreds := credentials.NewTLS(tlsConfig)
+	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 	target, err := agent.RPCAddr()
 	if err != nil {
 		return nil, err
 	}
 
-	cc, err := grpc.Dial(target, clientOptions...)
+	cc, err := grpc.Dial(fmt.Sprintf("%s://%s",
+		loadbalance.Name,
+		target), clientOptions...)
 
 	if err != nil {
 		return nil, err

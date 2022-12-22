@@ -286,8 +286,7 @@ func (d *DistributedLog) WaitForLeader(timeout time.Duration) error {
 		return err
 	case <-ticker.C:
 		addr, id := d.raft.LeaderWithID()
-		d.slog("leader at", "id", id, "addr", addr)
-		if id == "" {
+		if id == "" || addr == "" {
 			return nil
 		}
 	}
@@ -300,12 +299,12 @@ func (d *DistributedLog) Close() error {
 }
 
 // slog logs a debugging message is DebugCM > 0.
-func (d *DistributedLog) slog(format string, args ...interface{}) {
-	if DebugMode > 0 {
-		format = fmt.Sprintf("[%v] ", d.config.Raft.LocalID) + format
-		d.logger.Infow(format, args...)
-	}
-}
+//func (d *DistributedLog) slog(format string, args ...interface{}) {
+//	if DebugMode > 0 {
+//		format = fmt.Sprintf("[%v] ", d.config.Raft.LocalID) + format
+//		d.logger.Infow(format, args...)
+//	}
+//}
 
 // slog logs a debugging message is DebugCM > 0.
 func (d *DistributedLog) error(format string, args ...interface{}) {
