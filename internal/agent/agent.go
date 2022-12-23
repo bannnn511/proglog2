@@ -31,11 +31,15 @@ type Agent struct {
 
 	shutdownLock sync.Mutex
 	isShutdown   bool
+	shutdowns    chan struct{}
 }
 
 type Config struct {
 	ServerTLSConfig *tls.Config
 	PeerTLSConfig   *tls.Config
+	ACLModelFile    string
+	ACLPolicyFile   string
+
 	// DataDir stores the log and raft fata.
 	DataDir string
 	// Raft server id.
@@ -50,7 +54,8 @@ type Config struct {
 
 func New(config Config) (*Agent, error) {
 	agent := &Agent{
-		Config: config,
+		Config:    config,
+		shutdowns: make(chan struct{}),
 	}
 
 	setups := []func() error{
@@ -67,6 +72,7 @@ func New(config Config) (*Agent, error) {
 			return nil, err
 		}
 	}
+
 	go func() {
 		err := agent.serve()
 		if err != nil {
@@ -207,6 +213,7 @@ func (a *Agent) Shutdown() error {
 		return nil
 	}
 	a.isShutdown = true
+	close(a.shutdowns)
 
 	shutdownFunctions := []func() error{
 		a.Membership.Leave,
@@ -218,8 +225,7 @@ func (a *Agent) Shutdown() error {
 	}
 
 	for _, shutdownFunc := range shutdownFunctions {
-		err := shutdownFunc()
-		if err != nil {
+		if err := shutdownFunc(); err != nil {
 			return err
 		}
 	}

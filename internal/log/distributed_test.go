@@ -1,11 +1,12 @@
 // START: distributed_log_test_intro
-package log
+package log_test
 
 import (
 	"fmt"
 	"net"
 	"os"
 	api "proglog/api/v1"
+	"proglog/internal/log"
 	"proglog/util"
 	"reflect"
 	"testing"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestMultipleNodes(t *testing.T) {
-	var logs []*DistributedLog
+	var logs []*log.DistributedLog
 	nodeCount := 3
 
 	for i := 0; i < nodeCount; i++ {
@@ -35,8 +36,8 @@ func TestMultipleNodes(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		config := Config{}
-		config.Raft.StreamLayer = NewStreamLayer(ln, nil, nil)
+		config := log.Config{}
+		config.Raft.StreamLayer = log.NewStreamLayer(ln, nil, nil)
 		config.Raft.LocalID = raft.ServerID(fmt.Sprintf("%d", i))
 		config.Raft.HeartbeatTimeout = 50 * time.Millisecond
 		config.Raft.ElectionTimeout = 50 * time.Millisecond
@@ -50,7 +51,7 @@ func TestMultipleNodes(t *testing.T) {
 			config.Raft.Bootstrap = true
 		}
 
-		l, err := NewDistributedLog(dataDir, config)
+		l, err := log.NewDistributedLog(dataDir, config)
 		require.NoError(t, err)
 
 		if i != 0 {

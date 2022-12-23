@@ -44,7 +44,6 @@ func (r *Resolver) Build(target resolver.Target, conn resolver.ClientConn, build
 	var err error
 	r.resolverConn, err = grpc.Dial(target.URL.Host, opts...)
 	if err != nil {
-		fmt.Println("here her")
 		return nil, err
 	}
 
@@ -87,12 +86,11 @@ func (r *Resolver) ResolveNow(resolver.ResolveNowOptions) {
 			Attributes: attributes.New("is_leader", server.IsLeader),
 		})
 	}
-
-	err = r.clientConn.UpdateState(resolver.State{
+	fmt.Println("jerefsadfasdf", addresses)
+	if err = r.clientConn.UpdateState(resolver.State{
 		Addresses:     addresses,
 		ServiceConfig: r.serviceConfig,
-	})
-	if err != nil {
+	}); err != nil {
 		r.logger.Error("cannot update client connection", zap.Error(err))
 	}
 }

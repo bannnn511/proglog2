@@ -60,7 +60,7 @@ func TestAgent(t *testing.T) {
 			startJoinAddresses = append(startJoinAddresses, agents[0].BindAddr)
 		}
 
-		config := agent.Config{
+		agent, err := agent.New(agent.Config{
 			DataDir:            dataDir,
 			Boostrap:           i == 0,
 			NodeName:           fmt.Sprintf("Node No.%v", i),
@@ -69,15 +69,15 @@ func TestAgent(t *testing.T) {
 			StartJoinAddresses: startJoinAddresses,
 			PeerTLSConfig:      peerTLSConfig,
 			ServerTLSConfig:    serverTLSConfig,
-		}
-
-		agent, err := agent.New(config)
+			ACLModelFile:       config.ACLModelFile,
+			ACLPolicyFile:      config.ACLPolicyFile,
+		},
+		)
 		require.NoError(t, err, "create agent error")
 		agents = append(agents, agent)
 	}
 	// END: Setup Agent
 
-	// START: Handle shutting down agents
 	defer func() {
 		for _, agent := range agents {
 			err := agent.Shutdown()
@@ -85,12 +85,11 @@ func TestAgent(t *testing.T) {
 			require.NoError(t, os.RemoveAll(agent.DataDir))
 		}
 	}()
-	// END: Handle shutting down agents
 
 	time.Sleep(3 * time.Second)
+
 	// START: Leader log client
-	leaderClient, err := client(agents[0], peerTLSConfig)
-	require.NoError(t, err, "error create leader client")
+	leaderClient := client(t, agents[0], peerTLSConfig)
 
 	message := "hello"
 	leaderResponse, err := leaderClient.Produce(
@@ -103,6 +102,8 @@ func TestAgent(t *testing.T) {
 	)
 	require.NoError(t, err, "leader produce error")
 
+	time.Sleep(3 * time.Second)
+
 	consume, err := leaderClient.Consume(
 		context.Background(),
 		&api.ConsumeRequest{Offset: leaderResponse.Offset},
@@ -112,11 +113,7 @@ func TestAgent(t *testing.T) {
 	// END: Leader log client
 
 	// START: Test consumer
-	consumerClient, err := client(agents[1], peerTLSConfig)
-	require.NoError(t, err, "error create client 1")
-
-	//wait for replication
-	time.Sleep(3 * time.Second)
+	consumerClient := client(t, agents[1], peerTLSConfig)
 	response, err := consumerClient.Consume(
 		context.Background(),
 		&api.ConsumeRequest{
@@ -127,22 +124,17 @@ func TestAgent(t *testing.T) {
 	require.Equal(t, string(response.Record.Value), message)
 }
 
-func client(agent *agent.Agent, tlsConfig *tls.Config) (api.LogClient, error) {
+func client(t *testing.T, agent *agent.Agent, tlsConfig *tls.Config) api.LogClient {
 	tlsCreds := credentials.NewTLS(tlsConfig)
 	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 	target, err := agent.RPCAddr()
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	cc, err := grpc.Dial(fmt.Sprintf("%s://%s",
 		loadbalance.Name,
 		target), clientOptions...)
 
-	if err != nil {
-		return nil, err
-	}
-	logClient := api.NewLogClient(cc)
+	require.NoError(t, err)
 
-	return logClient, nil
+	return api.NewLogClient(cc)
 }

@@ -9,6 +9,7 @@ require (
 	github.com/hashicorp/serf v0.10.1
 	github.com/soheilhy/cmux v0.1.5
 	github.com/stretchr/testify v1.8.0
+	github.com/travisjeffery/go-dynaport v1.0.0
 	github.com/tysonmote/gommap v0.0.2
 	go.opencensus.io v0.23.0
 	go.uber.org/zap v1.23.0

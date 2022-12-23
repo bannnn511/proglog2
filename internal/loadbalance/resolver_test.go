@@ -1,6 +1,7 @@
 package loadbalance_test
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	api "proglog/api/v1"
@@ -61,8 +62,16 @@ func TestResolver(t *testing.T) {
 		DialCreds: clientCreds,
 	}
 	r := &loadbalance.Resolver{}
-	targetUrl, err := url.Parse("http://" + l.Addr().String())
+	targetUrl, err := url.Parse(
+		fmt.Sprintf(
+			"%s://%s",
+			loadbalance.Name,
+			l.Addr().String(),
+		),
+	)
+
 	require.NoError(t, err)
+
 	_, err = r.Build(
 		resolver.Target{
 			URL: *targetUrl,
@@ -75,15 +84,18 @@ func TestResolver(t *testing.T) {
 
 	// START: finish_test
 	wantState := resolver.State{
-		Addresses: []resolver.Address{{
-			Addr:       "localhost:9001",
-			ServerName: "leader",
-			Attributes: attributes.New("is_leader", true),
-		}, {
-			Addr:       "localhost:9002",
-			ServerName: "follower",
-			Attributes: attributes.New("is_leader", false),
-		}},
+		Addresses: []resolver.Address{
+			{
+				Addr:       "localhost:9001",
+				ServerName: "leader",
+				Attributes: attributes.New("is_leader", true),
+			},
+			{
+				Addr:       "localhost:9002",
+				ServerName: "follower",
+				Attributes: attributes.New("is_leader", false),
+			},
+		},
 	}
 	require.Equal(t, wantState.Addresses, conn.state.Addresses)
 

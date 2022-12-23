@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	api "proglog/api/v1"
+	"proglog/internal/discovery"
 	"time"
 
 	"go.uber.org/zap"
@@ -27,6 +28,8 @@ type DistributedLog struct {
 	raft   *raft.Raft
 	logger *zap.SugaredLogger
 }
+
+var _ discovery.Handler = (*DistributedLog)(nil)
 
 // NewDistributedLog creates a new distributed log.
 // It will create a new log and raft instance.
@@ -55,17 +58,14 @@ func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
 // setupLog creates the log for this server, where the server will store user's records.
 func (d *DistributedLog) setupLog(dataDir string) error {
 	directoryPath := filepath.Join(dataDir, "log")
-	err := os.MkdirAll(directoryPath, 0755)
-	if err != nil {
+	if err := os.MkdirAll(directoryPath, 0755); err != nil {
 		return err
 	}
 
+	var err error
 	d.Log, err = NewLog(directoryPath, d.config)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (d *DistributedLog) setupRaft(dataDir string) error {
@@ -147,25 +147,35 @@ func (d *DistributedLog) setupRaft(dataDir string) error {
 		return err
 	}
 
-	hasState, err := raft.HasExistingState(logStore, boltStore, snapshotStore)
-	if err != nil {
-		return err
-	}
+	//hasState, err := raft.HasExistingState(logStore, boltStore, snapshotStore)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//// if raft has no state, bootstrap it
+	//// first server is usually bootstrap itself as the only voter.
+	//// leader will add more servers into the cluster.
+	//// subsequent servers don't bootstrap themselves.
+	//if !hasState {
+	//	bootstrapConfig := raft.Configuration{
+	//		Servers: []raft.Server{
+	//			{
+	//				ID:      d.config.Raft.Config.LocalID,
+	//				Address: transport.LocalAddr(),
+	//			},
+	//		},
+	//	}
+	//	err = d.raft.BootstrapCluster(bootstrapConfig).Error()
+	//}
 
-	// if raft has no state, bootstrap it
-	// first server is usually bootstrap itself as the only voter.
-	// leader will add more servers into the cluster.
-	// subsequent servers don't bootstrap themselves.
-	if !hasState {
-		bootstrapConfig := raft.Configuration{
-			Servers: []raft.Server{
-				{
-					ID:      d.config.Raft.Config.LocalID,
-					Address: transport.LocalAddr(),
-				},
-			},
+	if d.config.Raft.Bootstrap {
+		config := raft.Configuration{
+			Servers: []raft.Server{{
+				ID:      raftConfig.LocalID,
+				Address: transport.LocalAddr(),
+			}},
 		}
-		err = d.raft.BootstrapCluster(bootstrapConfig).Error()
+		err = d.raft.BootstrapCluster(config).Error()
 	}
 	// END: raft
 
@@ -199,6 +209,7 @@ const (
 )
 
 func (d *DistributedLog) Append(record *api.Record) (uint64, error) {
+	d.slog("Append", "value", record.Value, "offset", record.Offset)
 	response, err := d.apply(AppendRequestType, &api.ProduceRequest{Record: record})
 	if err != nil {
 		return 0, err
@@ -242,6 +253,7 @@ func (d *DistributedLog) apply(requestType RequestType, message proto.Message) (
 
 // Reade is eventually consistent read.
 func (d *DistributedLog) Read(offset uint64) (*api.Record, error) {
+	d.slog("Read", "offset", offset)
 	return d.Log.Read(offset)
 }
 
@@ -262,15 +274,23 @@ func (d *DistributedLog) Join(id, addr string) error {
 				return nil
 			}
 
-			d.raft.RemoveServer(serverID, 0, 0)
+			removeFuture := d.raft.RemoveServer(serverID, 0, 0)
+			if err := removeFuture.Error(); err != nil {
+				return err
+			}
 		}
-		d.raft.AddVoter(serverID, serverAddr, 0, 0)
+
+		addFuture := d.raft.AddVoter(serverID, serverAddr, 0, 0)
+		if err := addFuture.Error(); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (d *DistributedLog) Leave(id string) error {
+	d.slog("leave", "id", id)
 	indexFuture := d.raft.RemoveServer(raft.ServerID(id), 0, 0)
 	return indexFuture.Error()
 }
@@ -299,12 +319,12 @@ func (d *DistributedLog) Close() error {
 }
 
 // slog logs a debugging message is DebugCM > 0.
-//func (d *DistributedLog) slog(format string, args ...interface{}) {
-//	if DebugMode > 0 {
-//		format = fmt.Sprintf("[%v] ", d.config.Raft.LocalID) + format
-//		d.logger.Infow(format, args...)
-//	}
-//}
+func (d *DistributedLog) slog(format string, args ...interface{}) {
+	if DebugMode > 0 {
+		format = fmt.Sprintf("[%v] ", d.config.Raft.LocalID) + format
+		d.logger.Infow(format, args...)
+	}
+}
 
 // slog logs a debugging message is DebugCM > 0.
 func (d *DistributedLog) error(format string, args ...interface{}) {

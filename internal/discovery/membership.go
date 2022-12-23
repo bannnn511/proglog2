@@ -116,15 +116,6 @@ func (m *Membership) Members() []serf.Member {
 
 // handleJoin handles serf.EventMemberJoin.
 func (m *Membership) handleJoin(mem *serf.Member) {
-	logger, _ := zap.NewDevelopment()
-	logger.Sugar()
-	logger.Sugar()
-	logger.Info("JOINED-----",
-		zap.String("current node", m.NodeName),
-		zap.String("mem name", mem.Name),
-		zap.String("mem addr", mem.Tags["rpc_addr"]),
-	)
-
 	if err := m.handler.Join(mem.Name, mem.Tags["rpc_addr"]); err != nil {
 		m.logError(err, "failed to joins", *mem)
 	}
