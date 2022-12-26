@@ -86,7 +86,7 @@ func (r *Resolver) ResolveNow(resolver.ResolveNowOptions) {
 			Attributes: attributes.New("is_leader", server.IsLeader),
 		})
 	}
-	fmt.Println("jerefsadfasdf", addresses)
+
 	if err = r.clientConn.UpdateState(resolver.State{
 		Addresses:     addresses,
 		ServiceConfig: r.serviceConfig,

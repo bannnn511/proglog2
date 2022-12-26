@@ -55,15 +55,15 @@ func (m *Membership) setupSerf() error {
 	if err != nil {
 		return err
 	}
-	serfConfig := serf.DefaultConfig()
 
+	serfConfig := serf.DefaultConfig()
+	serfConfig.Init()
 	serfConfig.MemberlistConfig.BindAddr = tcpAddr.IP.String()
 	serfConfig.MemberlistConfig.BindPort = tcpAddr.Port
 	m.events = make(chan serf.Event)
 	serfConfig.EventCh = m.events
 	serfConfig.Tags = m.Config.Tags
 	serfConfig.NodeName = m.NodeName
-	serfConfig.Init()
 	mSerf, err := serf.Create(serfConfig)
 	if err != nil {
 		return err

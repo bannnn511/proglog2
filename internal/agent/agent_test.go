@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -39,8 +38,6 @@ func TestAgent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	logger, _ := zap.NewDevelopment()
-	logger.Sugar()
 	var agents []*agent.Agent
 
 	// START: Setup Agent
@@ -122,6 +119,7 @@ func TestAgent(t *testing.T) {
 	)
 	require.NoError(t, err, "consumer consume error")
 	require.Equal(t, string(response.Record.Value), message)
+
 }
 
 func client(t *testing.T, agent *agent.Agent, tlsConfig *tls.Config) api.LogClient {

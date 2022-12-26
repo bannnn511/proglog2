@@ -25,8 +25,8 @@ type Agent struct {
 	Config
 
 	mux        cmux.CMux
-	Log        *log.DistributedLog
-	Server     *grpc.Server
+	log        *log.DistributedLog
+	server     *grpc.Server
 	Membership *discovery.Membership
 
 	shutdownLock sync.Mutex
@@ -76,7 +76,7 @@ func New(config Config) (*Agent, error) {
 	go func() {
 		err := agent.serve()
 		if err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}()
 
@@ -115,13 +115,13 @@ func (a *Agent) setupLog() error {
 	raftConfig.Raft.Bootstrap = a.Boostrap
 
 	var err error
-	a.Log, err = log.NewDistributedLog(a.DataDir, raftConfig)
+	a.log, err = log.NewDistributedLog(a.DataDir, raftConfig)
 	if err != nil {
 		return err
 	}
 
 	if a.Boostrap {
-		return a.Log.WaitForLeader(3 * time.Second)
+		return a.log.WaitForLeader(3 * time.Second)
 	}
 
 	return nil
@@ -129,8 +129,8 @@ func (a *Agent) setupLog() error {
 
 func (a *Agent) setupServer() error {
 	config := &server.Config{
-		CommitLog:   a.Log,
-		GetServerer: a.Log,
+		CommitLog:   a.log,
+		GetServerer: a.log,
 	}
 
 	var opts []grpc.ServerOption
@@ -140,14 +140,14 @@ func (a *Agent) setupServer() error {
 	}
 
 	var err error
-	a.Server, err = server.NewGrpcServer(config, opts...)
+	a.server, err = server.NewGrpcServer(config, opts...)
 	if err != nil {
 		return err
 	}
 
 	grpcLn := a.mux.Match(cmux.Any())
 	go func() {
-		err := a.Server.Serve(grpcLn)
+		err := a.server.Serve(grpcLn)
 		if err != nil {
 			_ = a.Shutdown()
 		}
@@ -183,7 +183,7 @@ func (a *Agent) setupMembership() error {
 	}
 
 	membership, err := discovery.New(
-		a.Log,
+		a.log,
 		config,
 	)
 
@@ -197,6 +197,7 @@ func (a *Agent) setupMembership() error {
 
 func (a *Agent) serve() error {
 	if err := a.mux.Serve(); err != nil {
+		fmt.Println("-------------- mux shutdown", err.Error())
 		_ = a.Shutdown()
 
 		return err
@@ -218,10 +219,10 @@ func (a *Agent) Shutdown() error {
 	shutdownFunctions := []func() error{
 		a.Membership.Leave,
 		func() error {
-			a.Server.GracefulStop()
+			a.server.GracefulStop()
 			return nil
 		},
-		a.Log.Close,
+		a.log.Close,
 	}
 
 	for _, shutdownFunc := range shutdownFunctions {

@@ -24,7 +24,7 @@ const DebugMode = 1
 // DistributedLog is a distributed Log with raft for handling consensus.
 type DistributedLog struct {
 	config Config
-	Log    *Log
+	log    *Log
 	raft   *raft.Raft
 	logger *zap.SugaredLogger
 }
@@ -63,7 +63,7 @@ func (d *DistributedLog) setupLog(dataDir string) error {
 	}
 
 	var err error
-	d.Log, err = NewLog(directoryPath, d.config)
+	d.log, err = NewLog(directoryPath, d.config)
 
 	return err
 }
@@ -71,7 +71,7 @@ func (d *DistributedLog) setupLog(dataDir string) error {
 func (d *DistributedLog) setupRaft(dataDir string) error {
 	// FSN that applies the command given to Raft.
 	fsm := &fsm{
-		log: d.Log,
+		log: d.log,
 	}
 
 	// START: log store where Raft will store commands.
@@ -146,27 +146,6 @@ func (d *DistributedLog) setupRaft(dataDir string) error {
 	if err != nil {
 		return err
 	}
-
-	//hasState, err := raft.HasExistingState(logStore, boltStore, snapshotStore)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//// if raft has no state, bootstrap it
-	//// first server is usually bootstrap itself as the only voter.
-	//// leader will add more servers into the cluster.
-	//// subsequent servers don't bootstrap themselves.
-	//if !hasState {
-	//	bootstrapConfig := raft.Configuration{
-	//		Servers: []raft.Server{
-	//			{
-	//				ID:      d.config.Raft.Config.LocalID,
-	//				Address: transport.LocalAddr(),
-	//			},
-	//		},
-	//	}
-	//	err = d.raft.BootstrapCluster(bootstrapConfig).Error()
-	//}
 
 	if d.config.Raft.Bootstrap {
 		config := raft.Configuration{
@@ -253,8 +232,7 @@ func (d *DistributedLog) apply(requestType RequestType, message proto.Message) (
 
 // Reade is eventually consistent read.
 func (d *DistributedLog) Read(offset uint64) (*api.Record, error) {
-	d.slog("Read", "offset", offset)
-	return d.Log.Read(offset)
+	return d.log.Read(offset)
 }
 
 // START: Service Discovery handler
@@ -290,7 +268,7 @@ func (d *DistributedLog) Join(id, addr string) error {
 }
 
 func (d *DistributedLog) Leave(id string) error {
-	d.slog("leave", "id", id)
+	d.slog("Leave", "id", id)
 	indexFuture := d.raft.RemoveServer(raft.ServerID(id), 0, 0)
 	return indexFuture.Error()
 }
@@ -298,24 +276,29 @@ func (d *DistributedLog) Leave(id string) error {
 func (d *DistributedLog) WaitForLeader(timeout time.Duration) error {
 	timeoutC := time.After(timeout)
 	ticker := time.NewTicker(time.Second)
-	select {
-	case <-timeoutC:
-		err := errors.New("timeout waiting for leader")
-		d.error(err.Error())
+	for {
+		select {
+		case <-timeoutC:
+			err := errors.New("timeout waiting for leader")
+			d.error(err.Error())
 
-		return err
-	case <-ticker.C:
-		addr, id := d.raft.LeaderWithID()
-		if id == "" || addr == "" {
-			return nil
+			return err
+		case <-ticker.C:
+			addr, _ := d.raft.LeaderWithID()
+			if addr != "" {
+				return nil
+			}
 		}
 	}
-
-	return nil
 }
 
 func (d *DistributedLog) Close() error {
-	return d.raft.Shutdown().Error()
+	d.slog("Close")
+	if err := d.raft.Shutdown().Error(); err != nil {
+		fmt.Println("error shutting down raft", err)
+		return err
+	}
+	return d.log.Close()
 }
 
 // slog logs a debugging message is DebugCM > 0.
@@ -361,8 +344,7 @@ func (s StreamLayer) Accept() (net.Conn, error) {
 	}
 
 	buffer := make([]byte, 1)
-	_, err = conn.Read(buffer)
-	if err != nil {
+	if _, err := conn.Read(buffer); err != nil {
 		return nil, err
 	}
 
