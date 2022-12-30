@@ -1,3 +1,13 @@
+TAG ?= 0.0.1
+
+build-docker:
+	docker build . -t prolog:$(TAG)
+run-prolog:
+	docker build . -t prolog:$(TAG) && \
+	docker run prolog:$(TAG)
+clean-docker:
+	docker ps -a | grep 'prolog' | awk '{print $1}' | xargs docker rm
+	docker images -a | grep "prolog" | awk '{print $3}' | xargs docker rmi
 
 compile-protoc:
 	protoc api/v1/*.proto \
