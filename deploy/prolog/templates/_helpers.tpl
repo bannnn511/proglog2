@@ -1,3 +1,3 @@
 {{- define "prolog.fullname" -}}
-{{- .Values.fullnameOverride }}
+{{- .Values.fullnameOverride -}}
 {{- end -}}

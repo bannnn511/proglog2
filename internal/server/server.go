@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	api "proglog/api/v1"
-	log2 "proglog/internal/log"
 	"time"
 
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -19,7 +18,7 @@ import (
 )
 
 type Config struct {
-	CommitLog   *log2.DistributedLog
+	CommitLog   CommitLog
 	GetServerer GetServerer
 }
 

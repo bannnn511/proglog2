@@ -293,7 +293,6 @@ func (d *DistributedLog) WaitForLeader(timeout time.Duration) error {
 }
 
 func (d *DistributedLog) Close() error {
-	d.slog("Close")
 	if err := d.raft.Shutdown().Error(); err != nil {
 		fmt.Println("error shutting down raft", err)
 		return err
