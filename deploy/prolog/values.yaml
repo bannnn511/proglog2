@@ -21,6 +21,7 @@ nameOverride: ""
 fullnameOverride: "prolog"
 
 storage: 1GB
+storageClassName: "local-storage"
 
 rpcPort: 8400
 serfPort: 8401
