@@ -8,12 +8,6 @@ image:
   repository: "bannnnn/prolog"
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
-
-imageInit:
-  repository: "bannnnn/init-prolog"
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
   tag: "0.0.1"
 
 imagePullSecrets: [ ]

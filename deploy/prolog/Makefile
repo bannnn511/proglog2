@@ -1,4 +1,15 @@
-build-init:
-	docker build -t bannnnn/init-prolog ./config && docker push bannnnn/init-prolog
+create-cluster:
+	kind create cluster --config ./config/cluster-local.yam
 install:
-	kubectl apply -f ./config/storage-class.yaml && helm install prolog .
+	kubectl apply -f ./config/storage-class.yaml && \
+	kubectl apply -f ./config/persistent-volume.yaml && \
+	helm install prolog .
+clean:
+	kubectl delete -f ./config/storage-class.yaml && \
+	kubectl delete -f ./config/persistent-volume.yaml && \
+	kubectl delete -f ./config/persistent-volume-1.yaml && \
+	kubectl delete -f ./config/persistent-volume-2.yaml && \
+	helm delete prolog && \
+	kubectl delete pvc datadir-prolog-0 \
+	kubectl delete pvc datadir-prolog-1 \
+	kubectl delete pvc datadir-prolog-2

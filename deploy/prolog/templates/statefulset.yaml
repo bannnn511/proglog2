@@ -16,16 +16,23 @@ spec:
     spec:
       initContainers:
         - name: {{ include "prolog.fullname" .}}-config-init
-          image: {{.Values.imageInit.repository}}
+          image: busybox
           imagePullPolicy: IfNotPresent
           command:
-            - ./init.sh
-            - "{{.Values.rpcPort}}"
-            - {{.Release.Namespace}}
-            - "{{.Values.serfPort}}"
+            - /bin/sh
+            - -c
+            - |-
+              ID=$(echo $HOSTNAME | rev | cut -d- -f1 | rev)
+              cat > /var/run/prolog/config.yaml <<EOD
+              data-dir: /var/run/proglog/data
+              bootstrap: $([ $ID = 0 ] && echo true || echo false )
+              rpc-port: {{.Values.rpcPort}}
+              bind-addr: "$HOSTNAME.proglog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"
+              $([ $ID != 0 ] && echo 'start-join-addrs: "proglog-0.proglog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
+              EOD
           volumeMounts:
-            - mountPath: datadir
-              name: /var/run/proglog
+            - mountPath: /var/run/prolog
+              name: datadir
       containers:
         - name: {{ include "prolog.fullname" .}}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -35,14 +42,14 @@ spec:
             - containerPort: {{ .Values.serfPort}}
               name: serf
           volumeMounts:
-            - mountPath: datadir
-              name: /var/run/prolog
+            - mountPath: /var/run/prolog
+              name:  datadir
   volumeClaimTemplates:
     - metadata:
         name: datadir
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: {{ .Values.storageClassName }}
+        storageClassName: local-storage
         resources:
           requests:
-            storage: 1Gi
+            storage: 100Mi
