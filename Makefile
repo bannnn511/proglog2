@@ -1,4 +1,4 @@
-TAG ?= 0.0.1
+TAG ?= debug
 
 build-docker:
 	docker build . -t bannnnn/prolog:$(TAG) && docker push bannnnn/prolog:$(TAG)

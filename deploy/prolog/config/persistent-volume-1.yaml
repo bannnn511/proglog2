@@ -1,9 +1,7 @@
-persistent-volume:
-  yaml:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: local-pv-1persistent-volume.yaml
+  name: local-pv-1
 spec:
     capacity:
         storage: 1Gi

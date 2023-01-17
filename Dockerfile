@@ -8,7 +8,7 @@ RUN go mod download
 RUN CGO_ENABLED=0 go build -o /app/bin/prolog ./cmd/prolog/
 
 
-FROM scratch
+FROM alpine
 
 COPY --from=builder /app/bin/prolog /bin/proglog
 
