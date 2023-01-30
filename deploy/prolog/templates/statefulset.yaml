@@ -24,11 +24,11 @@ spec:
             - |-
               ID=$(echo $HOSTNAME | rev | cut -d- -f1 | rev)
               cat > /var/run/prolog/config.yaml <<EOD
-              data-dir: /var/run/proglog/data
+              data-dir: /var/run/prolog/data
               bootstrap: $([ $ID = 0 ] && echo true || echo false )
               rpc-port: {{.Values.rpcPort}}
-              bind-addr: "$HOSTNAME.proglog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"
-              $([ $ID != 0 ] && echo 'start-join-addrs: "proglog-0.proglog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
+              bind-addr: "$HOSTNAME.prolog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"
+              $([ $ID != 0 ] && echo 'start-join-addrs: "prolog-0.prolog.{{.Release.Namespace}}.svc.cluster.local:{{.Values.serfPort}}"')
               EOD
           volumeMounts:
             - mountPath: /var/run/prolog
@@ -54,7 +54,6 @@ spec:
         name: datadir
       spec:
         accessModes: [ "ReadWriteOnce" ]
-        storageClassName: local-storage
         resources:
           requests:
-            storage: 100Mi
+            storage: {{ .Values.storage }}
