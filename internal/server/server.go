@@ -6,6 +6,8 @@ import (
 	api "proglog/api/v1"
 	"time"
 
+	"google.golang.org/grpc/health"
+
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -15,6 +17,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type Config struct {
@@ -79,6 +82,11 @@ func NewGrpcServer(config *Config, grpcOpts ...grpc.ServerOption) (*grpc.Server,
 	// ENDs: grpcOpts
 
 	grpcServer := grpc.NewServer(grpcOpts...)
+
+	hsrv := health.NewServer()
+	hsrv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+	healthpb.RegisterHealthServer(grpcServer, hsrv)
+
 	srv, err := newgrpcServer(config)
 	if err != nil {
 		return nil, err

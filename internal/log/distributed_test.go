@@ -43,6 +43,7 @@ func TestMultipleNodes(t *testing.T) {
 		config.Raft.ElectionTimeout = 50 * time.Millisecond
 		config.Raft.LeaderLeaseTimeout = 50 * time.Millisecond
 		config.Raft.CommitTimeout = 5 * time.Millisecond
+		config.Raft.BindAddr = ln.Addr().String()
 		// END: distributed_log_test_intro
 
 		// START: distributed_log_test_cont

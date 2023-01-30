@@ -1,5 +1,7 @@
 TAG ?= debug
 
+build:
+	go build -o ./prolog ./cmd/prolog/
 build-docker:
 	docker build . -t bannnnn/prolog:$(TAG) && docker push bannnnn/prolog:$(TAG)
 run-prolog:
