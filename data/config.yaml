@@ -1,5 +1,0 @@
-data-dir: /var/run/proglog/data
-bootstrap: false
-rpc-port: 8400
-bind-addr: "prolog-2.proglog.default.svc.cluster.local:8401"
-start-join-addrs: "proglog-0.proglog.default.svc.cluster.local:8401"

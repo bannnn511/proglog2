@@ -1,4 +1,4 @@
-TAG ?= debug
+TAG ?= 0.0.4
 
 build:
 	go build -o ./prolog ./cmd/prolog/

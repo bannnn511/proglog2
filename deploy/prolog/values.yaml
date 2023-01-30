@@ -14,7 +14,7 @@ imagePullSecrets: [ ]
 nameOverride: ""
 fullnameOverride: "prolog"
 
-storage: 1GB
+storage: 1Gi
 storageClassName: "local-storage"
 
 rpcPort: 8400

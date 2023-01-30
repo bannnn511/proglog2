@@ -1,0 +1,4 @@
+data-dir: ./data
+bootstrap: true
+rpc-port: 8400
+bind-addr: "prolog-0.proglog.default.svc.cluster.local:8401"
