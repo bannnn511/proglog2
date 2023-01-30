@@ -111,10 +111,15 @@ func (a *Agent) setupLog() error {
 
 	raftConfig := log.Config{}
 	raftConfig.Raft.StreamLayer = log.NewStreamLayer(raftLn, a.ServerTLSConfig, a.PeerTLSConfig)
+
+	rpcAddr, err := a.Config.RPCAddr()
+	if err != nil {
+		return err
+	}
+	raftConfig.Raft.BindAddr = rpcAddr
 	raftConfig.Raft.LocalID = raft.ServerID(a.NodeName)
 	raftConfig.Raft.Bootstrap = a.Boostrap
 
-	var err error
 	a.log, err = log.NewDistributedLog(a.DataDir, raftConfig)
 	if err != nil {
 		return err
@@ -157,7 +162,12 @@ func (a *Agent) setupServer() error {
 }
 
 func (a *Agent) setupMux() error {
-	rpcAddr := fmt.Sprintf(":%d", a.RpcPort)
+	add, err := net.ResolveTCPAddr("tcp", a.BindAddr)
+	if err != nil {
+		return err
+	}
+
+	rpcAddr := fmt.Sprintf("%s:%d", add.IP.String(), a.RpcPort)
 	listen, err := net.Listen("tcp", rpcAddr)
 	if err != nil {
 		return err
