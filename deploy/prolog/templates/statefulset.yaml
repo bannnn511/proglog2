@@ -17,7 +17,7 @@ spec:
       initContainers:
         - name: {{ include "prolog.fullname" .}}-config-init
           image: busybox
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command:
             - /bin/sh
             - -c
@@ -36,6 +36,11 @@ spec:
       containers:
         - name: {{ include "prolog.fullname" .}}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          command:
+            - /bin/proglog
+            - --config-file
+          args:
+            - /var/run/prolog/config.yaml
           ports:
             - containerPort: {{ .Values.rpcPort}}
               name: rpc

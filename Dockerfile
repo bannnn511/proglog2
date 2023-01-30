@@ -12,4 +12,4 @@ FROM alpine
 
 COPY --from=builder /app/bin/prolog /bin/proglog
 
-ENTRYPOINT ["/bin/proglog"]
+#ENTRYPOINT ["/bin/proglog"]

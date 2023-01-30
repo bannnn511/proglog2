@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -77,6 +78,7 @@ type cli struct {
 func (c *cli) run(_ *cobra.Command, _ []string) error {
 	var err error
 
+	fmt.Println("[Config]", c.cfg.Config)
 	a, err := agent.New(c.cfg.Config)
 	if err != nil {
 		return err
