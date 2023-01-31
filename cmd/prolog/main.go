@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +13,11 @@ import (
 	"proglog/internal/config"
 	"syscall"
 
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,11 +25,36 @@ import (
 func main() {
 	cli := &cli{}
 
+	healthCheckCmd := &cobra.Command{
+		Use: "health",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			addr := flag.String("addr", ":8400", "service address")
+			flag.Parse()
+			conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			client := healthpb.NewHealthClient(conn)
+			res, err := client.Check(context.Background(), &healthpb.HealthCheckRequest{})
+			if err != nil {
+				log.Fatal(err)
+			}
+			if res.Status != healthpb.HealthCheckResponse_SERVING {
+				return errors.New("not serving")
+			}
+			fmt.Println("health check oke")
+
+			return nil
+		},
+	}
+
 	cmd := &cobra.Command{
 		Use:     "proglog",
 		PreRunE: cli.setupConfig,
 		RunE:    cli.run,
 	}
+	cmd.AddCommand(healthCheckCmd)
 
 	if err := setupFlags(cmd); err != nil {
 		log.Fatal(err)
