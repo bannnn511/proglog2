@@ -49,6 +49,14 @@ spec:
           volumeMounts:
             - mountPath: /var/run/prolog
               name:  datadir
+          readinessProbe:
+            grpc:
+              port: {{ .Values.rpcPort }}
+            initialDelaySeconds: 5
+          livenessProbe:
+            grpc:
+              port: {{ .Values.rpcPort }}
+            initialDelaySeconds: 10
   volumeClaimTemplates:
     - metadata:
         name: datadir
