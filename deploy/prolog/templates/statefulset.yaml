@@ -33,6 +33,13 @@ spec:
           volumeMounts:
             - mountPath: /var/run/prolog
               name: datadir
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
       containers:
         - name: {{ include "prolog.fullname" .}}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
@@ -57,6 +64,13 @@ spec:
             grpc:
               port: {{ .Values.rpcPort }}
             initialDelaySeconds: 10
+          resources:
+            requests:
+              memory: "1000Mi"
+              cpu: "250m"
+            limits:
+              memory: "2000Mi"
+              cpu: "500m"
   volumeClaimTemplates:
     - metadata:
         name: datadir
