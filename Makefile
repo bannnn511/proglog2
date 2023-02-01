@@ -2,7 +2,7 @@ TAG ?= 0.0.4
 REGION ?= asia-southeast1
 
 set-project-id:
-	export PROJECT_ID=$(cloud projects list | grep 'distributed' |tail -n 1 | cut -d' ' -f1)
+	export PROJECT_ID=$(gcloud projects list | grep 'distributed' |tail -n 1 | cut -d' ' -f1)
 # START: Docker
 build-binary:
 	go build -o ./prolog ./cmd/prolog/
@@ -22,6 +22,8 @@ run-prolog:
 clean-docker:
 	docker ps -a | grep 'prolog' | awk '{print $1}' | xargs docker rm
 	docker images -a | grep "prolog" | awk '{print $3}' | xargs docker rmi
+helm-install-gcp:
+	helm install prolog ./deploy/prolog --set-string image.repository=gcr.io/${PROJECT_ID}/proglog
 # END: Docker
 
 # START: protobuf
