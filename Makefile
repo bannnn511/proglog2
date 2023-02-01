@@ -23,7 +23,7 @@ clean-docker:
 	docker ps -a | grep 'prolog' | awk '{print $1}' | xargs docker rm
 	docker images -a | grep "prolog" | awk '{print $3}' | xargs docker rmi
 helm-install-gcp:
-	helm install prolog ./deploy/prolog --set-string image.repository=gcr.io/${PROJECT_ID}/proglog
+	helm install prolog ./deploy/prolog --set-string image.repository=$(REGION)-docker.pkg.dev/${PROJECT_ID}/prolog/prolog
 # END: Docker
 
 # START: protobuf
