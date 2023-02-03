@@ -44,7 +44,7 @@ spec:
         - name: {{ include "prolog.fullname" .}}
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           command:
-            - /bin/proglog
+            - /bin/prolog
             - --config-file
           args:
             - /var/run/prolog/config.yaml

@@ -1,4 +1,4 @@
-TAG ?= 0.0.4
+TAG ?= 0.1.1
 REGION ?= asia-southeast1
 
 set-project-id:
@@ -7,9 +7,9 @@ set-project-id:
 build-binary:
 	go build -o ./prolog ./cmd/prolog/
 build-image:
-	docker build . -t bannnnn/prolog:$(TAG)
+	docker build  --platform linux/amd64 . -t bannnnn/prolog:$(TAG)
 build-docker:
-	docker build . -t bannnnn/prolog:$(TAG) && docker push bannnnn/prolog:$(TAG)
+	docker build  --platform linux/amd64 . -t bannnnn/prolog:$(TAG) && docker push bannnnn/prolog:$(TAG)
 build-docker-gcp:
     # https://cloud.google.com/artifact-registry/docs/docker/pushing-and-pulling
     # docker tag bannnnn/prolog:0.0.4 asia-southeast1-docker.pkg.dev/distributed-log-376410/prolog/prolog:0.0.4
