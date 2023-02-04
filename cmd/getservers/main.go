@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", ":8400", "service address")
+	addr := flag.String("addr", "34.142.144.9:8400", "service address")
 	flag.Parse()
 	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -33,6 +33,7 @@ func main() {
 		for _, server := range res.Servers {
 			fmt.Printf("\t- %v\n", server)
 		}
+
 	}
 
 	{
@@ -45,5 +46,6 @@ func main() {
 		if res.Status != healthpb.HealthCheckResponse_SERVING {
 			log.Fatal(res.Status)
 		}
+		fmt.Println("health check oke")
 	}
 }
