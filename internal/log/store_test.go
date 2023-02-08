@@ -90,24 +90,18 @@ func Test_store_ReadAt(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("u", u, "u2", u2)
 
 	_, u1, _ := s.Append([]byte(content))
-	fmt.Println("u1", u1)
 	b := make([]byte, u)
-	test, err := s.ReadAt(b, int64(u1-1))
+	_, err = s.ReadAt(b, int64(u1-1))
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Printf("readAt %q\n", test)
 
 	data, err := s.Read(u2)
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(string(data))
 
 	if string(data) != content {
 		t.Errorf("want %v, got %v", content, string(data))

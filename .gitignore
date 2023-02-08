@@ -24,6 +24,3 @@ go.work
 # intellij
 .idea/
 
-# Certs
-*.pem
-*.csr
