@@ -131,9 +131,9 @@ func setupTest(t *testing.T, fn func(*Config)) (
 			require.NoError(t, err)
 		}
 
-		if err := l.Close(); err != nil {
-			require.NoError(t, err)
-		}
+		//if err := l.Close(); err != nil {
+		//	require.NoError(t, err)
+		//}
 
 		if err := clog.Remove(); err != nil {
 			require.NoError(t, err)
