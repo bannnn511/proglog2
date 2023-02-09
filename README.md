@@ -17,7 +17,7 @@
     - Server replication using service discovery
     - Cordinate service using Raft for consensus algorithm
     - Loadbalance using GRPC resolver
-    - Start server locally using K8s and Helm
+    - Deploy server locally using K8s and Helm
 
 ## How to run this project?
 
@@ -41,18 +41,25 @@
 ## Deploy to GKE
 
     1. Create service account:
-        - `gcloud iam service-accounts create $SA_NAME`
+        - gcloud iam service-accounts create $SA_NAME
     2. Retrieve the email address of the service account you just created:
-      - `gcloud iam service-accounts list`
+        - gcloud iam service-accounts list
+        - set $SA_EMAIL=<service_account_email_address>
     3. Get project id:
-      - `gcloud projects list | grep 'distributed' |tail -n 1 | cut -d' ' -f1`
+        - gcloud projects list | grep 'distributed' |tail -n 1 | cut -d' ' -f1
+        - set GKE_PROJECT=<project_id>
     4. Add roles to the service account. Note: Apply more restrictive roles to suit your requirements.
-      - `gcloud projects add-iam-policy-binding $GKE_PROJECT \
-        --member=serviceAccount:$SA_EMAIL \
-        --role=roles/container.admin`
-      - `gcloud projects add-iam-policy-binding $GKE_PROJECT \
-        --member=serviceAccount:$SA_EMAIL \
-        --role=roles/storage.admin`
-      - `gcloud projects add-iam-policy-binding $GKE_PROJECT \
-        --member=serviceAccount:$SA_EMAIL \
-        --role=roles/container.clusterViewer`
+        - gcloud projects add-iam-policy-binding $GKE_PROJECT \
+            --member=serviceAccount:$SA_EMAIL \
+            --role=roles/container.admin
+        - gcloud projects add-iam-policy-binding $GKE_PROJECT \
+            --member=serviceAccount:$SA_EMAIL \
+            --role=roles/storage.admin
+        - gcloud projects add-iam-policy-binding $GKE_PROJECT \
+            --member=serviceAccount:$SA_EMAIL \
+            --role=roles/container.clusterViewer
+    5. Download the JSON keyfile for the service account
+        - gcloud iam service-accounts keys create key.json --iam-account=$SA_EMAIL
+    6. Store the service account key as a secret named GKE_SA_KEY:
+        - export GKE_SA_KEY=$(cat key.json | base64)
+    7. Store key on github secrets
