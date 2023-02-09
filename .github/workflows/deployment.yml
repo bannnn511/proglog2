@@ -5,7 +5,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "release" ]
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
@@ -67,9 +67,7 @@ jobs:
           docker push "$(ARTIFACT_REGION)-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPO/$IMAGE:$GITHUB_SHA"
 
       - name: Deploy
-        uses: 'deliverybot/helm@v1'
+        uses: WyriHaximus/github-action-helm3@v2
         with:
-          release: 'prolog'
-          namespace: 'default'
-          chart: 'deploy/prolog'
-          value-files: 'deploy/prolog/values.yaml'
+          exec: helm install APP_NAME ./deploy/prolog/ --values=./deploy/prolog/values.yaml
+          kubeconfig: '${{ secrets.KUBECONFIG }}'
