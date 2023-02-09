@@ -18,6 +18,7 @@
     - Cordinate service using Raft for consensus algorithm
     - Loadbalance using GRPC resolver
     - Deploy server locally using K8s and Helm
+    - CICD pipeline to deploy server to GKE
 
 ## How to run this project?
 
