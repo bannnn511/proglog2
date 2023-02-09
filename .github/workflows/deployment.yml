@@ -15,6 +15,7 @@ env:
   ARTIFACT_REGION: asia-southeast1
   ARTIFACT_REPO: prolog
   IMAGE: prolog
+  APP_NAME: prolog
 
 jobs:
   setup-build-publish-deploy:
@@ -67,5 +68,5 @@ jobs:
       - name: Deploy
         uses: WyriHaximus/github-action-helm3@v2
         with:
-          exec: helm install APP_NAME ./deploy/prolog/ --values=./deploy/prolog/values.yaml
+          exec: helm install $APP_NAME ./deploy/prolog/ --values=./deploy/prolog/values.yaml
           kubeconfig: '${{ secrets.KUBECONFIG }}'
