@@ -42,7 +42,8 @@ jobs:
 
       # Configure Docker to use the gcloud command-line tool as a credential
       # helper for authentication
-      - run: |-
+      - name: configure docker to use gcloud
+        run: |-
           gcloud --quiet auth configure-docker
 
       # Get the GKE credentials, so we can deploy to the cluster
@@ -65,8 +66,8 @@ jobs:
         run: |-
           docker push "$(ARTIFACT_REGION)-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPO/$IMAGE:$GITHUB_SHA"
 
-      - name: 'Deploy'
-        uses: 'deliverybot/helm@v1'
+      - name: Deploy
+        uses: 'deliverybot/helm@v3'
         with:
           release: 'prolog'
           namespace: 'default'
