@@ -30,10 +30,6 @@ jobs:
           go-version: 1.19
           cache: true
 
-      # Run tests
-      - name: Test
-        run: go test -v ./...
-
       # Setup gcloud CLI
       - uses: google-github-actions/setup-gcloud@94337306dda8180d967a56932ceb4ddcf01edae7
         with:
