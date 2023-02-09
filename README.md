@@ -18,6 +18,7 @@
     - Cordinate service using Raft for consensus algorithm
     - Loadbalance using GRPC resolver
     - Deploy server locally using K8s and Helm
+    - CICD pipeline to deploy server to GKE
 
 ## How to run this project?
 
@@ -58,6 +59,9 @@
         - gcloud projects add-iam-policy-binding $GKE_PROJECT \
             --member=serviceAccount:$SA_EMAIL \
             --role=roles/container.clusterViewer
+        - gcloud projects add-iam-policy-binding $GKE_PROJECT \
+            --member=serviceAccount:$SA_EMAIL \
+            --role=roles/artifactregistry.writer
     5. Download the JSON keyfile for the service account
         - gcloud iam service-accounts keys create key.json --iam-account=$SA_EMAIL
     6. Store the service account key as a secret named GKE_SA_KEY:
