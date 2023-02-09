@@ -14,7 +14,7 @@ env:
   DEPLOYMENT_NAME: gke-test # Add your deployment name here.
   ARTIFACT_REGION: asia-southeast1
   ARTIFACT_REPO: prolog
-  IMAGE: static-site
+  IMAGE: prolog
 
 jobs:
   setup-build-publish-deploy:
@@ -57,14 +57,14 @@ jobs:
       - name: Build
         run: |-
           docker build \
-            --tag "$(ARTIFACT_REGION)-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPO/$IMAGE:$GITHUB_SHA" \
+            --tag "$ARTIFACT_REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPO/$IMAGE:$GITHUB_SHA" \
             --build-arg GITHUB_SHA="$GITHUB_SHA" \
             --build-arg GITHUB_REF="$GITHUB_REF" \
 
       # Push the Docker image to Google Artifact Registry
       - name: Publish
         run: |-
-          docker push "$(ARTIFACT_REGION)-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPO/$IMAGE:$GITHUB_SHA"
+          docker push "$ARTIFACT_REGION-docker.pkg.dev/$PROJECT_ID/$ARTIFACT_REPO/$IMAGE:$GITHUB_SHA"
 
       - name: Deploy
         uses: WyriHaximus/github-action-helm3@v2
