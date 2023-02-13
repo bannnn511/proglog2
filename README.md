@@ -14,7 +14,7 @@
     - Serve request with GRPC
     - Observer the system with tracing
     - Server to server service discovery using Hashicorp Serf
-    - Server replication using service discovery
+    - State machine replication using service discovery
     - Cordinate service using Raft for consensus algorithm
     - Loadbalance using GRPC resolver
     - Deploy server locally using K8s and Helm
