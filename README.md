@@ -39,6 +39,7 @@
   - GKE
   - GitHub actions
 
+
 ## How to run this project?
 
     1. Build project image:
