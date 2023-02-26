@@ -2,23 +2,42 @@
 
 ## What is this project?
 
-    - A distributed system for storing and replicating logs.
+- A distributed system for storing and replicating logs.
 
 ## What is the purpose of this project?
 
-    - To learn about distributed systems.
+- To learn about distributed systems.
 
 ## What do you learn from this project?
 
-    - Build a log package
-    - Serve request with GRPC
-    - Observer the system with tracing
-    - Server to server service discovery using Hashicorp Serf
-    - Server replication using service discovery
-    - Cordinate service using Raft for consensus algorithm
-    - Loadbalance using GRPC resolver
-    - Deploy server locally using K8s and Helm
-    - CICD pipeline to deploy server to GKE
+- Build a log package
+- Serve request with GRPC
+- Observer the system with tracing
+- Server to server service discovery using Hashicorp Serf
+- State machine replication using service discovery
+- Cordinate service using Raft for consensus algorithm
+- Loadbalance using GRPC resolver
+- Deploy server locally using K8s and Helm
+- CICD pipeline to deploy server to GKE
+
+## Technical stack
+
+- Backend building blocks
+  - [stretchr/testify](github.com/stretchr/testify)
+  - google.golang.org/genproto
+  - google.golang.org/grpc
+  - google.golang.org/protobuf
+  - google.golang.org/grpc/balancer
+  - google.golang.org/grpc/attributes
+  - google.golang.org/grpc/resolver
+- Consensus Algorithms:
+  - [Raft](github.com/hashicorp/raft)
+  - [Gossip protocol](github.com/hashicorp/serf/serf)
+- Devops:
+  - Kubernetes
+  - Helm
+  - GKE
+  - GitHub actions
 
 ## How to run this project?
 
